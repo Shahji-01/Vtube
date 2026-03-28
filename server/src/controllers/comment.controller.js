@@ -21,11 +21,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
     
     try {
         const videoComments = await Comment.find({video:video_Id}).skip((page-1)*limit).limit(limit).exec();
-        // console.log(videoComments, "comments")
-        if (!videoComments || videoComments.length === 0) {
-            throw new ApiError(404,"Could not find comments for specified video")
-        }
-        
+        // No error if it's an empty array, a video having 0 comments is perfectly valid.
         res
         .status(200)
         .json(new ApiResponse(200, videoComments, "All comments fetched successfully"))
