@@ -47,3 +47,13 @@ export function secureUrl(url) {
   if (!url) return ''
   return url.replace(/^http:\/\//i, 'https://')
 }
+
+// ── secureVideoUrl: forces mp4 for browser compatibility ──
+export function secureVideoUrl(url) {
+  if (!url) return ''
+  let secure = url.replace(/^http:\/\//i, 'https://')
+  if (secure.includes('/video/upload/')) {
+    secure = secure.replace('/video/upload/', '/video/upload/f_mp4/')
+  }
+  return secure
+}
