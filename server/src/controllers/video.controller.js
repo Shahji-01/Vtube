@@ -88,7 +88,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         const videoUploaded = await uploadOnCloudinary(videoLocalPath)
         const thumbanilUploaded = await uploadOnCloudinary(thumbnailLocalPath)
         // console.log(videoUploaded, thumbanilUploaded, "1111")
-        if (!(videoUploaded.url && thumbanilUploaded.url)) {
+        if (!(videoUploaded.secure_url && thumbanilUploaded.secure_url)) {
             throw new ApiError(400, "Video and thumbanil is required")
         }
         // console.log("22222")
@@ -97,8 +97,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
                 title,
                 description,
                 duration: videoUploaded.duration,
-                videoFile: videoUploaded.url,
-                thumbnail: thumbanilUploaded.url,
+                videoFile: videoUploaded.secure_url,
+                thumbnail: thumbanilUploaded.secure_url,
                 isPublished:true,
                 owner: req.user?._id // bcz we have added useer object thoru veirfyjwt 
             }
@@ -184,7 +184,7 @@ const updateVideo = asyncHandler(async (req, res) => {
     try {
         const thumbnail = await uploadOnCloudinary(thumbnailLocalPath)
     
-        if (!thumbnail.url) {
+        if (!thumbnail.secure_url) {
             throw new ApiError(400, "Error while uploading thumbnail")
         }
         const deleteVideoThumbnail = await Video.findById(req.user?._id)
@@ -202,7 +202,7 @@ const updateVideo = asyncHandler(async (req, res) => {
                 {
                     title:title,
                     description:description,
-                    thumbnail:thumbnail.url || ""
+                    thumbnail:thumbnail.secure_url || ""
                 }
             },
             {new:true, validateBeforeSave:false},

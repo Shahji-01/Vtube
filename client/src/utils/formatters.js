@@ -41,3 +41,9 @@ export function getInitials(name) {
 export function getErrorMessage(err) {
   return err?.response?.data?.message || err?.message || 'Something went wrong'
 }
+
+// ── secureUrl: "http://..." → "https://..." ──
+export function secureUrl(url) {
+  if (!url) return ''
+  return url.replace(/^http:\/\//i, 'https://')
+}

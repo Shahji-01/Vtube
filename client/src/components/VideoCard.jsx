@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { formatDuration, formatTimeAgo, formatViews } from '../utils/formatters'
+import { formatDuration, formatTimeAgo, formatViews, secureUrl } from '../utils/formatters'
 import Avatar from './Avatar'
 
 export default function VideoCard({ video, hideAvatar = false }) {
@@ -16,7 +16,7 @@ export default function VideoCard({ video, hideAvatar = false }) {
       <div className="video-thumb-wrap">
         <img
           className="video-thumb"
-          src={video.thumbnail}
+          src={secureUrl(video.thumbnail)}
           alt={video.title}
           loading="lazy"
         />

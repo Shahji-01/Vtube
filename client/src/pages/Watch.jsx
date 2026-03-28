@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { formatViews, formatTimeAgo, formatDuration, getErrorMessage } from '../utils/formatters'
+import { formatViews, formatTimeAgo, formatDuration, getErrorMessage, secureUrl } from '../utils/formatters'
 import Avatar from '../components/Avatar'
 import VideoCard from '../components/VideoCard'
 import Spinner from '../components/Spinner'
@@ -246,9 +246,9 @@ export default function Watch() {
                 autoplay: true, 
                 controls: true, 
                 responsive: true,
-                sources: [{ src: video.videoFile, type: 'video/mp4' }] 
+                sources: [{ src: secureUrl(video.videoFile), type: 'video/mp4' }] 
              }} 
-             poster={video.thumbnail} 
+             poster={secureUrl(video.thumbnail)} 
           />
         </div>
 

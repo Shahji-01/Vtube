@@ -113,12 +113,15 @@ console.log("fullName email user password : ", fullName, email, username, passwo
     throw new ApiError(400, "avatar file is required");
   }
   // console.log("huii 1111")
+  if (!avatar.secure_url) {
+    throw new ApiError(400, "avatar file is required");
+  }
                       // step 6 - create a new user on db
   
   const user = await User.create({
     fullName,
-    avatar: avatar.url,
-    coverImage: coverImage?.url || "",
+    avatar: avatar.secure_url,
+    coverImage: coverImage?.secure_url || "",
     email,
     password,
     username: username.toLowerCase(),
@@ -392,16 +395,16 @@ console.log("fullName email user password : ", fullName, email, username, passwo
       const avatar = await uploadOnCloudinary(avatarLocalPath);
       
       //console.log(avatar,"Avatar updated")
-      if (!avatar.url) {
-         throw new ApiError(400, "Error while uploading avatar")
+      if (!avatar.secure_url) {
+         throw new ApiError(400, "Error while uploading Avatar")
       }
       
-      const deleteUserAvatar = await User.findById(req.user?._id)
+      const deleteOldAvatar = await User.findById(req.user?._id)
       // console.log("1" ,deleteUserAvatar
       
-      if (deleteUserAvatar) {
+      if (deleteOldAvatar && deleteOldAvatar.avatar) {
        // console.log("2", avatar.url)
-         await deleteOnCloudinaryImage(deleteUserAvatar.avatar);
+         await deleteOnCloudinaryImage(deleteOldAvatar.avatar);
       }
 
       const user =   await User.findByIdAndUpdate(
@@ -409,7 +412,7 @@ console.log("fullName email user password : ", fullName, email, username, passwo
  
        {
          $set:{
-           avatar:avatar.url
+           avatar:avatar.secure_url
          }
        },
        {new:true}
@@ -436,16 +439,16 @@ console.log("fullName email user password : ", fullName, email, username, passwo
       
       const coverImage = await uploadOnCloudinary(coverImageLocalPath);
       
-      if (!coverImage.url) {
+      if (!coverImage.secure_url) {
          throw new ApiError(400, "Error while uploading cover image")
       }
       
-      const deleteUserCoverImage = await User.findById(req.user?._id)
+      const oldCoverImageId = await User.findById(req.user?._id)
       // console.log("1" ,deleteVideoCoverImage)
       
-      if (deleteUserCoverImage) {
+      if (oldCoverImageId && oldCoverImageId.coverImage) {
        // console.log("2", coverImage.url)
-         await deleteOnCloudinaryImage(deleteUserCoverImage.coverImage);
+         await deleteOnCloudinaryImage(oldCoverImageId.coverImage);
       }
 
       // console.log("1", coverImage.url)
