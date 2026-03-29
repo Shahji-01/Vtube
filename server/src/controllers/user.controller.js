@@ -56,8 +56,7 @@ import mongoose , { isValidObjectId } from "mongoose";
 
                                    // step1
 
- const { fullName, email, username, password } = req.body; 
-console.log("fullName email user password : ", fullName, email, username, password);
+ const { fullName, email, username, password } = req.body;
 
                         // STEP-NO-2 validate - not empty
 
@@ -503,16 +502,16 @@ console.log("fullName email user password : ", fullName, email, username, passwo
           }
       },
       {
-        $addFields: {  //to add new fields
-                 subscriberCount: {
-                      $size:"$subscribers"  //used dollor bcz it it(subscribers) now a field
+        $addFields: {
+                 subscribersCount: {
+                      $size:"$subscribers"
                   },
-                  cannelIsSubscribedToCount:{
+                  channelsSubscribedToCount:{
                       $size:"$subscribedTo"
                   },
                   isSubscribed:{
                     $cond:{
-                      if:{$in:[req.user?._id, "$subscribers.subscriber"]}, // here $subscribers is field that we added as object  and .subscriber is from model
+                      if:{$in:[req.user?._id, "$subscribers.subscriber"]},
                       then:true,
                       else:false
                     }
@@ -520,11 +519,11 @@ console.log("fullName email user password : ", fullName, email, username, passwo
         }
       },
       {
-        $project:{ // this is what we want to  To include any other fields from the input documents in the output documents, you must explicitly specify the inclusion in 
+        $project:{
           username:1,
           fullName:1,
-          subscriberCount:1,
-          cannelIsSubscribedToCount:1,
+          subscribersCount:1,
+          channelsSubscribedToCount:1,
           isSubscribed:1,
           avatar:1,
           coverImage:1,
@@ -532,73 +531,65 @@ console.log("fullName email user password : ", fullName, email, username, passwo
       }
     ])
    
-     console.log("yuyuyuu",channel[0], "channel from channelpipleline")
-
-     if (channel?.length === 0 || channel?.length === null || channel[0] === undefined ) { // channel[0] === udefined means usr is searching for channel which does not ecxist
-         throw new ApiError(404, "channel deos not exists");
+     if (!channel?.length || channel[0] === undefined) {
+         throw new ApiError(404, "Channel does not exist");
      }
-      console.log(1111111)
      return res
      .status(200)
-     .json(new ApiResponse(200, channel[0],"User channel fetched successfully" ));
+     .json(new ApiResponse(200, channel[0], "User channel fetched successfully"));
   })
 
-//  --------------watch history---------------------
-    const getWatchHistory = asyncHandler(async (req, res)=>{
-    // req.user._id   this will give string not mongodb id this is is converted by mongoose internally into mongodb id as objectId("")
-     
+const getWatchHistory = asyncHandler(async (req, res) => {
     const user = await User.aggregate([
       {
-        $match:{
-          _id:new mongoose.Types.ObjectId(req.user._id),// bcz mongooose will not converted this into id
+        $match: {
+          _id: new mongoose.Types.ObjectId(req.user._id)
         }
       },
       {
-        $lookup:{
-          from:"videos", //our Video model will be saved as videos on mogodb
-          localField:"watchHistory",
-          foreignField:"_id",
-          as:"watchHistory",
-          pipeline:[
+        $lookup: {
+          from: "videos",
+          localField: "watchHistory",
+          foreignField: "_id",
+          as: "watchHistory",
+          pipeline: [
             {
-              $lookup:{
-                from:"users",
-                localField:"owner",
-                foreignField:"_id",
-                as:"owner",
-                pipeline:[ // everthing will be added to owner filed only
+              $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
                   {
-                    $project:{
-                        username:1,
-                        fullName:1,
-                        avatar:1
+                    $project: {
+                        username: 1,
+                        fullName: 1,
+                        avatar: 1
                     }
                   }
                 ]
               }
             },
             {
-              $addFields:{
-                owner:{
-                  $first:"$owner"
-                }
+              $addFields: {
+                owner: { $first: "$owner" }
               }
             }
           ]
+        }
+      },
+      {
+        // Reverse so the most recently watched video appears first
+        $addFields: {
+          watchHistory: { $reverseArray: "$watchHistory" }
         }
       }
     ])
     
     return res
        .status(200)
-       .json(
-        new ApiResponse(
-          200,
-          user[0].watchHistory,
-          "Watch History fetched"
-          )
-       )
-    })
+       .json(new ApiResponse(200, user[0]?.watchHistory || [], "Watch History fetched"))
+})
 
 const clearWatchHistory = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
@@ -616,6 +607,34 @@ const clearWatchHistory = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, [], "Watch history cleared successfully"));
 });
 
+const removeVideoFromWatchHistory = asyncHandler(async (req, res) => {
+    const { video_Id } = req.params;
+
+    if (!isValidObjectId(video_Id)) {
+        throw new ApiError(400, "Invalid video ID provided");
+    }
+
+    try {
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            {
+                $pull: { watchHistory: video_Id }
+            },
+            { new: true }
+        );
+
+        if (!user) {
+            throw new ApiError(404, "User not found");
+        }
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, {}, "Video removed from watch history"));
+    } catch (error) {
+        throw new ApiError(500, "Internal server error while removing video from watch history");
+    }
+});
+
   /*------------------------EXPORT-----------------------*/ 
  export { 
   registerUser,
@@ -629,66 +648,9 @@ const clearWatchHistory = asyncHandler(async (req, res) => {
   updateUserCoverImage,
   getUserChannelProfile,
   getWatchHistory,
-  clearWatchHistory
+  clearWatchHistory,
+  removeVideoFromWatchHistory
  };
 
 
 
-
- /*----------------------------DEFINITIONS IMP----------------------------*/
-
- /*----------------------------------REFRESH VS ACCESS TOKEN--------------------------*/
- /*
- RERESH TOKEN--
- A refresh token is a special type of token that is used to obtain a new access token when the current access token expires. 
- It has a longer lifespan compared to an access token and is typically used to maintain long-term authentication sessions.
-  Refresh tokens are securely stored and used by the client application to request a new access token from the authorization server without requiring the user to reauthenticate.
- ACCESS TOKEN--
-  An access token is a short-lived token that is used to authenticate requests to protected resources on behalf of the user.
-  It has a shorter lifespan compared to a refresh token and is typically used for short-term authorization.
-  Access tokens are issued by the authorization server after successful authentication and are included in each request to access protected resources.
-   SUMMARY
- The lifespan of a refresh token is generally longer than that of an access token,
-  and they serve different purposes in the authentication process.
-   Refresh tokens are used to obtain new access tokens, while access tokens are used to access protected resources.
- */
-
-/* ---------------------------------------COOKIE-----------------------------------------------*/
-   /* A cookie is a small piece of data sent from a website and stored 
-   on the user's computer by the user's web browser while the user is browsing. 
-   It allows the server to store user information.
- */
-
-
-/*------------------------------Pipelines and Aggrigation --------------------- */
-/* 
-// -------------------Aggregation-----------
-Aggregation operations process multiple documents and return computed results. You can use aggregation operations to:
-
-Group values from multiple documents(models) together.
-
-Perform operations on the grouped data to return a single result.
-
-Analyze data changes over time.
-
-// -----------------pipeline ------------------------------
-An aggregation pipeline consists of one or more stages that process  documents:
-
-Each stage performs an operation on the "{INPUT DOCUMENTS}". For example, a stage can filter documents, group documents, and calculate values.
-
-The {"DOCUMENTS THAT are OUTPUT FROM a STAGE"} are passed to the next stage.
-
-An aggregation pipeline can return results for groups of documents. For example, return the total, average, maximum, and minimum values.
-returns an ARRAY containing INFO
-WRITTE IN {},{},{} IF USE THREE CURLY BRACES IT MEANS ADDED THREE PIPELINES AND THESE REPRESENT THREE STAGES
-*/
-
-
-
-
-// ---------------------- $project-----------
-/*
-In MongoDB, the $project operator is used in aggregation pipelines to reshape documents by including, excluding, or transforming fields. 
-It allows you to specify which fields to include or exclude in the output documents,
-as well as to create new fields or compute expressions.
-*/

@@ -8,30 +8,27 @@ import asyncHandler from "../utils/asyncHandler.js"
 /*---------------------CreateTweet-------------------*/
 
 const createTweet = asyncHandler(async (req, res) => {
-    //TODO: create tweet
-    const {tweetToBeCreated} = req.body;
+    // Accept both `content` (Channel page) and `tweetToBeCreated` (legacy)
+    const content = req.body.content || req.body.tweetToBeCreated;
 
-    // console.log(tweetToBeCreated, "tweet")
-    if (!tweetToBeCreated) {
-        throw new ApiError(404, "No tweet created by user")
+    if (!content?.trim()) {
+        throw new ApiError(400, "Tweet content is required")
     }
 
     try {
-        const createdTweet = await Tweet.create(
-            {
-                content:tweetToBeCreated,
-                owner:req.user._id
-             })
-      console.log(createdTweet,"created tweet")       
+        const createdTweet = await Tweet.create({
+            content,
+            owner: req.user._id
+        })
       if (!createdTweet) {
           throw new ApiError(500, "Tweet could not be created")
       }
       res
       .status(200)
-      .json(new ApiResponse(200, createdTweet,"Tweet created successfully"))
+      .json(new ApiResponse(200, createdTweet, "Tweet created successfully"))
 
     } catch (error) {
-        throw new ApiError(500, error, "Error creating tweet")
+        throw new ApiError(500, error?.message || "Error creating tweet")
     }
 })//DONE!
 
@@ -64,31 +61,25 @@ const getUserTweets = asyncHandler(async (req, res) => {
 /*------------UPDATE TWEET----------------*/
 
 const updateTweet = asyncHandler(async (req, res) => {
-    //TODO: update tweet
     const {tweet_Id} = req.params
     const {tweet} = req.body
 
-    //console.log(tweet,tweet_Id ,"tweet and its id")
-
-    if (!(tweet || tweet_Id)) {
-        throw new ApiError(403, "tweet or tweet_Id is not provided")
+    if (!tweet || !tweet_Id) {
+        throw new ApiError(400, "Tweet content and tweet ID are required")
     }
     try {
-        const existingTweets = await Tweet.findOne({ _id: tweet_Id, owner: req.user._id });
-        console.log(existingTweets,"Tweets fetched")
-        if (!existingTweets) {
-            console.log(existingTweets, "not auhtenticated user")
-             throw new ApiError(401, `Tweet not found u can not update this: ${req.user.username} :tweet`)
+        const existingTweet = await Tweet.findOne({ _id: tweet_Id, owner: req.user._id });
+        if (!existingTweet) {
+             throw new ApiError(403, "Tweet not found or you are not authorized to update this tweet")
         }
-        const updatedTweet = await Tweet.findByIdAndUpdate(tweet_Id,
-                  {
-                    content : tweet
-                  }
-                  ,{new :true,validateBeforeSave:false}
-             )
+        const updatedTweet = await Tweet.findByIdAndUpdate(
+            tweet_Id,
+            { content: tweet },
+            { new: true, validateBeforeSave: false }
+        )
 
         if (!updatedTweet) {
-            throw new ApiError(403, "Something went wrong")
+            throw new ApiError(500, "Something went wrong while updating tweet")
         }
 
         res
@@ -96,43 +87,45 @@ const updateTweet = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, updatedTweet, "Tweet has been updated"))
 
     } catch (error) {
-        throw new ApiError(500, error, "Error updating tweet : Try again later")
+        if (error instanceof ApiError) throw error
+        throw new ApiError(500, error?.message || "Error updating tweet")
     }
 })//DONE!
 
 /*--------------------DELETEtWEET----------------*/
 
 const deleteTweet = asyncHandler(async (req, res) => {
-    //TODO: delete tweet
     const {tweet_Id} = req.params
 
     if (!tweet_Id) {
-        throw new ApiError(404,"Enter tweet_Id tp delete tweet")
+        throw new ApiError(400, "Enter tweet_Id to delete tweet")
+    }
+
+    if (!isValidObjectId(tweet_Id)) {
+        throw new ApiError(400, "Invalid tweet_Id: Enter valid tweet_Id")
     }
 
     try {
-        if (!isValidObjectId(tweet_Id)) {
-            throw new ApiError(404,"Invalid tweet_Id :Enter valid tweet_Id")
-        }
-
         const tweet = await Tweet.findById(tweet_Id)
 
-        if (!( tweet || ( tweet.owner.toString() !== req.user._id.toString()) )){
-                throw new ApiError(403, "You can not delete this tweet")
+        if (!tweet) {
+            throw new ApiError(404, "Tweet not found")
+        }
+
+        // FIXED: was inverted — any user could delete, owner could not.
+        if (tweet.owner.toString() !== req.user._id.toString()) {
+            throw new ApiError(403, "You are not authorized to delete this tweet")
         }
         
-       const deleteTweet = await Tweet.deleteOne({_id:tweet_Id})
+        await Tweet.deleteOne({ _id: tweet_Id })
 
-       if (!deleteTweet) {
-        throw new ApiError(500, "Delete tweet failed")
-       }
-
-       res
-       .status(200)
-       .json(new ApiResponse(200, deleteTweet, "Your tweet has been deleted"))
+        res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Your tweet has been deleted"))
 
     } catch (error) {
-        throw new ApiError(500, error, "Something went wrong while deleting your tweet :Try again")
+        if (error instanceof ApiError) throw error
+        throw new ApiError(500, error?.message || "Something went wrong while deleting your tweet")
     }
 })//DONE!
 

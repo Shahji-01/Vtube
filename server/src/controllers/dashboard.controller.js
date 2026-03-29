@@ -2,6 +2,7 @@ import mongoose from "mongoose"
 import {Video} from "../models/video.model.js"
 import {Subscription} from "../models/subscription.model.js"
 import {Like} from "../models/like.model.js"
+import {Comment} from "../models/comment.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
@@ -16,30 +17,31 @@ const getChannelStats = asyncHandler(async (req, res) => {
         
         const userId = req.user._id;
 
-        // Count subscribers
         const totalSubscribers = await Subscription.countDocuments({ channel: userId });
 
-        // Get videos
         const videos = await Video.find({ owner: userId });
         const totalVideos = videos.length;
         
         let totalVideoViews = 0;
-        videos.forEach(video => {
-            totalVideoViews += (video.views || video.view || 0); 
+        const videoIds = videos.map(video => {
+            totalVideoViews += (video.views || 0);
+            return video._id;
         });
 
-        // Get total likes for all videos owned by the user
-        let totalLikes = 0;
-        const videoIds = videos.map(video => video._id);
-        if (videoIds.length > 0) {
-            totalLikes = await Like.countDocuments({ video: { $in: videoIds } });
-        }
+        const totalLikes = videoIds.length > 0
+            ? await Like.countDocuments({ video: { $in: videoIds } })
+            : 0;
+
+        const totalComments = videoIds.length > 0
+            ? await Comment.countDocuments({ video: { $in: videoIds } })
+            : 0;
 
         const stats = {
             totalSubscribers,
             totalVideos,
             totalVideoViews,
-            totalLikes
+            totalLikes,
+            totalComments
         };
 
         res.status(200).json(new ApiResponse(200, stats, "Channel Stats fetched successfully"));

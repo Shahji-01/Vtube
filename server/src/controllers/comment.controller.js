@@ -9,27 +9,122 @@ import {triggerNotification} from "../utils/notification.js"
 /*------------GETVIDECOMMENTS----------------*/
 
 const getVideoComments = asyncHandler(async (req, res) => {
-    //TODO: get all comments for a video
-    const { video_Id } = req.params
-    const { page = 1, limit = 10 } = req.query
-    
-    // console.log(video_Id, "video_id from request")
+    const { video_Id } = req.params;
+    const { page = 1, limit = 10 } = req.query;
 
-    if (!video_Id){
-        throw new ApiError(404,"enter valid video_id to find comments")
+    if (!isValidObjectId(video_Id)) {
+        throw new ApiError(400, "Invalid video ID");
     }
-    
-    try {
-        const videoComments = await Comment.find({video:video_Id}).skip((page-1)*limit).limit(limit).exec();
-        // No error if it's an empty array, a video having 0 comments is perfectly valid.
-        res
+
+    const commentsAggregation = await Comment.aggregate([
+        {
+            $match: {
+                video: new mongoose.Types.ObjectId(video_Id),
+                parentComment: null
+            }
+        },
+        {
+            $sort: { createdAt: -1 }
+        },
+        {
+            $skip: (parseInt(page) - 1) * parseInt(limit)
+        },
+        {
+            $limit: parseInt(limit)
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            fullName: 1,
+                            avatar: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                owner: { $first: "$owner" }
+            }
+        },
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "comment",
+                as: "likes"
+            }
+        },
+        {
+            $addFields: {
+                likesCount: {
+                    $size: {
+                        $filter: {
+                            input: "$likes",
+                            as: "l",
+                            cond: { $eq: ["$$l.isDislike", false] }
+                        }
+                    }
+                },
+                dislikesCount: {
+                    $size: {
+                        $filter: {
+                            input: "$likes",
+                            as: "l",
+                            cond: { $eq: ["$$l.isDislike", true] }
+                        }
+                    }
+                },
+                isLiked: {
+                    $cond: {
+                        if: {
+                            $in: [req.user?._id, {
+                                $map: {
+                                    input: { $filter: { input: "$likes", as: "l", cond: { $eq: ["$$l.isDislike", false] } } },
+                                    as: "l",
+                                    in: "$$l.likedBy"
+                                }
+                            }]
+                        },
+                        then: true,
+                        else: false
+                    }
+                },
+                isDisliked: {
+                    $cond: {
+                        if: {
+                            $in: [req.user?._id, {
+                                $map: {
+                                    input: { $filter: { input: "$likes", as: "l", cond: { $eq: ["$$l.isDislike", true] } } },
+                                    as: "l",
+                                    in: "$$l.likedBy"
+                                }
+                            }]
+                        },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                likes: 0
+            }
+        }
+    ]);
+
+    return res
         .status(200)
-        .json(new ApiResponse(200, videoComments, "All comments fetched successfully"))
-
-    } catch (error) {
-        throw new ApiError(500, error, "Couldn't find video comments")
-    }
-})//DONE!
+        .json(new ApiResponse(200, commentsAggregation, "Comments fetched successfully"));
+});//DONE!
 
 
 /*-------------ADDCOMMENT-----------------*/
@@ -39,22 +134,18 @@ const addComment = asyncHandler(async (req, res) => {
     const { video_Id } = req.params;
 
     // Extracting comment content from request body
-    const {commentContent} = req.body;
+    const { commentContent, parentComment } = req.body;
 
-    // console.log(video_Id, commentContent, "video id and comment");
-
-    // Checking if video ID or comment content is missing
     if (!(video_Id || commentContent)) {
-        // If either video ID or comment content is missing, throw an error
         throw new ApiError(404, "Invalid video_Id or you have not written any comment");
     }
 
     try {
-        // Creating a new comment document
         const newComment = await Comment.create({
             content: commentContent,
             video: video_Id,
-            owner: req.user._id // Assuming user is authenticated and their ID is in req.user._id
+            owner: req.user._id,
+            parentComment: parentComment || null
         });
 
         // Checking if new comment was successfully created
@@ -159,9 +250,129 @@ const deleteComment = asyncHandler(async (req, res) => {
 })//DONE!
 
 
+/*--------------GETCOMMENTREPLIES--------------------*/
+
+const getCommentReplies = asyncHandler(async (req, res) => {
+    const { comment_Id } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
+    if (!isValidObjectId(comment_Id)) {
+        throw new ApiError(400, "Invalid comment ID");
+    }
+
+    const repliesAggregation = await Comment.aggregate([
+        {
+            $match: {
+                parentComment: new mongoose.Types.ObjectId(comment_Id)
+            }
+        },
+        {
+            $sort: { createdAt: 1 }
+        },
+        {
+            $skip: (parseInt(page) - 1) * parseInt(limit)
+        },
+        {
+            $limit: parseInt(limit)
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            fullName: 1,
+                            avatar: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                owner: { $first: "$owner" }
+            }
+        },
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "comment",
+                as: "likes"
+            }
+        },
+        {
+            $addFields: {
+                likesCount: {
+                    $size: {
+                        $filter: {
+                            input: "$likes",
+                            as: "l",
+                            cond: { $eq: ["$$l.isDislike", false] }
+                        }
+                    }
+                },
+                dislikesCount: {
+                    $size: {
+                        $filter: {
+                            input: "$likes",
+                            as: "l",
+                            cond: { $eq: ["$$l.isDislike", true] }
+                        }
+                    }
+                },
+                isLiked: {
+                    $cond: {
+                        if: {
+                            $in: [req.user?._id, {
+                                $map: {
+                                    input: { $filter: { input: "$likes", as: "l", cond: { $eq: ["$$l.isDislike", false] } } },
+                                    as: "l",
+                                    in: "$$l.likedBy"
+                                }
+                            }]
+                        },
+                        then: true,
+                        else: false
+                    }
+                },
+                isDisliked: {
+                    $cond: {
+                        if: {
+                            $in: [req.user?._id, {
+                                $map: {
+                                    input: { $filter: { input: "$likes", as: "l", cond: { $eq: ["$$l.isDislike", true] } } },
+                                    as: "l",
+                                    in: "$$l.likedBy"
+                                }
+                            }]
+                        },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                likes: 0
+            }
+        }
+    ]);
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, repliesAggregation, "Replies fetched successfully"));
+});
+
 export {
     getVideoComments, 
     addComment, 
     updateComment,
-    deleteComment
-    }
+    deleteComment,
+    getCommentReplies
+}

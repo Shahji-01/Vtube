@@ -87,20 +87,8 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
 
     try {
         const channelSubscriptions = await Subscription.find({channel:channel_Id}) 
-        /* 
-        channelSubscription is an array of subscription documents, 
-        not a single document.
-        So, we need to iterate over channelUsers to access each subscriber's ID.
-         */
+        const subscriberIds = channelSubscriptions.map(subscription => subscription.subscriber)
 
-        if (!channelSubscriptions || channelSubscriptions.length === 0) {
-            throw new ApiError(404, "No such channel exists")
-        }
-        
-        const subscriberIds = channelSubscriptions.map(subscription => subscription.subscriber) //this will return array
-
-        // The subscriberIds array contains the IDs of all subscribers to the specified channel.
-        console.log(subscriberIds,"subcriberIds")
 
         res
         .status(200)
@@ -124,20 +112,8 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
 
     try {
         const userSubscriptions = await Subscription.find({subscriber:subscriberId}) 
-        /* 
-        userSubscription is an array of subscription documents, 
-        not a single document.
-        So, we need to iterate over Usersubscription to access each channel`s ID.
-         */
+        const channelIds = userSubscriptions.map(subscription => subscription.channel)
 
-        if (!userSubscriptions || userSubscriptions.length === 0) {
-            throw new ApiError(404, "You have not subscribed to any channels")
-        }
-        
-        const channelIds = userSubscriptions.map(subscription => subscription.channel) //this will return array
-
-        // The channelIds array contains the IDs of all channels which are being subscribed by user.
-        console.log(channelIds,"channelIds")
         
         res
         .status(200)
@@ -149,41 +125,79 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
 })//DONE!
 
 
+const getSubscribedChannelsVideos = asyncHandler(async (req, res) => {
+    const subscriberId = req.user._id;
+
+    try {
+        const videos = await Subscription.aggregate([
+            {
+                $match: {
+                    subscriber: new mongoose.Types.ObjectId(subscriberId)
+                }
+            },
+            {
+                $lookup: {
+                    from: "videos",
+                    localField: "channel",
+                    foreignField: "owner",
+                    as: "channelVideos"
+                }
+            },
+            {
+                $unwind: "$channelVideos"
+            },
+            {
+                $match: {
+                    "channelVideos.isPublished": true
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "channelVideos.owner",
+                    foreignField: "_id",
+                    as: "owner"
+                }
+            },
+            {
+                $unwind: "$owner"
+            },
+            {
+                $project: {
+                    _id: "$channelVideos._id",
+                    title: "$channelVideos.title",
+                    description: "$channelVideos.description",
+                    thumbnail: "$channelVideos.thumbnail",
+                    videoFile: "$channelVideos.videoFile",
+                    duration: "$channelVideos.duration",
+                    views: "$channelVideos.views",
+                    createdAt: "$channelVideos.createdAt",
+                    owner: {
+                        _id: "$owner._id",
+                        username: "$owner.username",
+                        fullName: "$owner.fullName",
+                        avatar: "$owner.avatar"
+                    }
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            }
+        ]);
+
+        return res.status(200).json(new ApiResponse(200, videos, "Subscribed channels videos fetched successfully"));
+    } catch (error) {
+        throw new ApiError(500, error?.message || "Something went wrong while fetching subscribed channels videos");
+    }
+});
+
+
 export {
     createChannel,
     toggleSubscription,
     getUserChannelSubscribers,
-    getSubscribedChannels
+    getSubscribedChannels,
+    getSubscribedChannelsVideos
 }
-
-
-
-
-
-
-/*---------------------IMP DEFINITION--------------*/
-/*
-//--------------------ROUTE PARAMTERED METHODS--------------------`
-Definition: 
-Route parameters are part of the URL path and are defined in the route pattern using a colon (:) followed by the parameter name. For example, /users/:userId defines a route parameter named userId.
-Usage: 
-Route parameters are used to extract dynamic values from the URL path. These values can change with each request, and they are typically used to identify a specific resource or entity.
-Access: 
-In Express.js, route parameters are accessible via the req.params object. For example, if you define a route parameter :userId, you can access its value using req.params.userId.
-Example: 
-/users/:userId matches URLs like /users/123, /users/456, where 123 and 456 are values of the userId parameter.
-
-//------------------------QUERY PARAMETERS------------------------
-Definition: 
-Query parameters are key-value pairs appended to the URL after a question mark (?). Each parameter is separated by an ampersand (&). For example, ?page=1&limit=10 contains two query parameters: page with a value of 1 and limit with a value of 10.
-Usage:
- Query parameters are used to provide additional data to a server when making an HTTP request. They are often used for filtering, sorting, or pagination purposes.
-Access:
- In Express.js, query parameters are accessible via the req.query object. For example, if a client sends a request with query parameters ?page=1&limit=10, you can access them using req.query.page and req.query.limit.
-Example:
- /users?page=1&limit=10 contains query parameters page and limit, which are used to specify the page number and the number of results per page, respectively.
-
-
- //--------------------SUMMARY--------------------
- In summary, route parameters are part of the URL path and are used for dynamic values, while query parameters are appended to the URL and are used for additional data in an HTTP request. They serve different purposes and are accessed differently in Express.js.
-*/

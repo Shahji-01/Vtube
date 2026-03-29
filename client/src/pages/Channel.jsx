@@ -13,11 +13,21 @@ const TrashIcon = () => (
   </svg>
 )
 
+const EditIcon = () => (
+  <svg viewBox="0 0 24 24" style={{ width: 14, height: 14, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}>
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+)
+
 function TweetsFeed({ userId, isOwner }) {
   const [tweets, setTweets] = useState([])
   const [loading, setLoading] = useState(true)
   const [newTweet, setNewTweet] = useState('')
   const [posting, setPosting] = useState(false)
+  const [editingTweetId, setEditingTweetId] = useState(null)
+  const [editTweetText, setEditTweetText] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
   const toast = useToast()
 
   useEffect(() => {
@@ -55,6 +65,26 @@ function TweetsFeed({ userId, isOwner }) {
     }
   }
 
+  const openEditTweet = (tweet) => {
+    setEditingTweetId(tweet._id)
+    setEditTweetText(tweet.content)
+  }
+
+  const handleSaveEdit = async (tweetId) => {
+    if (!editTweetText.trim()) return
+    setSavingEdit(true)
+    try {
+      const { data } = await api.patch(`/tweets/${tweetId}`, { tweet: editTweetText })
+      setTweets(prev => prev.map(t => t._id === tweetId ? { ...t, content: data.data?.content || editTweetText } : t))
+      setEditingTweetId(null)
+      toast({ message: 'Tweet updated', type: 'success' })
+    } catch {
+      toast({ message: 'Failed to update tweet', type: 'error' })
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
   if (loading) return <div style={{ padding: 20 }}>Loading tweets...</div>
 
   return (
@@ -79,14 +109,37 @@ function TweetsFeed({ userId, isOwner }) {
       ) : (
         tweets.map(t => (
           <div key={t._id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <p style={{ fontSize: 15, color: 'var(--text-primary)', lineHeight: 1.6, flex: 1 }}>{t.content}</p>
-              {isOwner && (
-                <button onClick={() => handleDeleteTweet(t._id)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, marginLeft: 12 }} title="Delete">
-                  <TrashIcon />
-                </button>
-              )}
-            </div>
+            {editingTweetId === t._id ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <textarea
+                  className="comment-textarea"
+                  rows={3}
+                  value={editTweetText}
+                  onChange={e => setEditTweetText(e.target.value)}
+                  autoFocus
+                />
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setEditingTweetId(null)} disabled={savingEdit}>Cancel</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => handleSaveEdit(t._id)} disabled={savingEdit || !editTweetText.trim()}>
+                    {savingEdit ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <p style={{ fontSize: 15, color: 'var(--text-primary)', lineHeight: 1.6, flex: 1, whiteSpace: 'pre-wrap' }}>{t.content}</p>
+                {isOwner && (
+                  <div style={{ display: 'flex', gap: 6, marginLeft: 12 }}>
+                    <button onClick={() => openEditTweet(t)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }} title="Edit">
+                      <EditIcon />
+                    </button>
+                    <button onClick={() => handleDeleteTweet(t._id)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }} title="Delete">
+                      <TrashIcon />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>{formatTimeAgo(t.createdAt)}</div>
           </div>
         ))

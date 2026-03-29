@@ -10,6 +10,7 @@ const EyeIcon   = () => <svg viewBox="0 0 24 24" style={{ width: 22, height: 22,
 const UsersIcon = () => <svg viewBox="0 0 24 24" style={{ width: 22, height: 22, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
 const LikeIcon  = () => <svg viewBox="0 0 24 24" style={{ width: 22, height: 22, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
 const FilmIcon  = () => <svg viewBox="0 0 24 24" style={{ width: 22, height: 22, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
+const MsgIcon   = () => <svg viewBox="0 0 24 24" style={{ width: 22, height: 22, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
 const TrashIcon = () => <svg viewBox="0 0 24 24" style={{ width: 15, height: 15, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
 const EditIcon  = () => <svg viewBox="0 0 24 24" style={{ width: 15, height: 15, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
 
@@ -22,10 +23,11 @@ function Toggle({ on, onChange }) {
 }
 
 const STAT_CARDS = (stats) => [
-  { label: 'Total Views',       value: stats?.totalVideoViews || 0,  Icon: EyeIcon,   color: '#60a5fa', bg: 'rgba(96,165,250,0.1)' },
-  { label: 'Subscribers',       value: stats?.totalSubscribers || 0, Icon: UsersIcon, color: '#4ade80', bg: 'rgba(74,222,128,0.1)' },
-  { label: 'Total Likes',       value: stats?.totalLikes || 0,       Icon: LikeIcon,  color: '#f472b6', bg: 'rgba(244,114,182,0.1)' },
-  { label: 'Total Videos',      value: stats?.totalVideos || 0,      Icon: FilmIcon,  color: '#ff2d2d', bg: 'rgba(255,45,45,0.1)' },
+  { label: 'Total Views',    value: stats?.totalVideoViews || 0,  Icon: EyeIcon,   color: '#60a5fa', bg: 'rgba(96,165,250,0.1)'  },
+  { label: 'Subscribers',   value: stats?.totalSubscribers || 0, Icon: UsersIcon, color: '#4ade80', bg: 'rgba(74,222,128,0.1)'  },
+  { label: 'Total Likes',   value: stats?.totalLikes || 0,       Icon: LikeIcon,  color: '#f472b6', bg: 'rgba(244,114,182,0.1)' },
+  { label: 'Total Videos',  value: stats?.totalVideos || 0,      Icon: FilmIcon,  color: '#ff2d2d', bg: 'rgba(255,45,45,0.1)'   },
+  { label: 'Total Comments',value: stats?.totalComments || 0,    Icon: MsgIcon,   color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'  },
 ]
 
 export default function Dashboard() {
@@ -109,7 +111,7 @@ export default function Dashboard() {
       fd.append('description', editForm.description)
       if (editThumb) fd.append('thumbnail', editThumb)
       
-      const { data } = await api.patch(`/videos/v/${editingVideo._id}`, fd, {
+      const { data } = await api.patch(`/videos/${editingVideo._id}`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       
@@ -322,6 +324,7 @@ export default function Dashboard() {
           background: var(--bg-surface); border: 1px solid var(--border);
           border-radius: 16px; padding: 24px; margin: auto;
           box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+          max-height: 90vh; overflow-y: auto;
         }
       `}</style>
     </>

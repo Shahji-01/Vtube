@@ -16,6 +16,12 @@ import mongoose, { Schema } from "mongoose";
         {
             type:Schema.Types.ObjectId,
             ref:"User"
+        },
+        parentComment:
+        {
+            type:Schema.Types.ObjectId,
+            ref:"Comment",
+            default:null
         }
     },{timestamps:true}
     )

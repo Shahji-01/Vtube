@@ -15,8 +15,8 @@ const ThumbUpIcon = ({ filled }) => (
     <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
   </svg>
 )
-const ThumbDownIcon = () => (
-  <svg viewBox="0 0 24 24" style={{ width: 16, height: 16, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}>
+const ThumbDownIcon = ({ filled }) => (
+  <svg viewBox="0 0 24 24" style={{ width: 16, height: 16, stroke: 'currentColor', fill: filled ? 'currentColor' : 'none', strokeWidth: 2 }}>
     <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/>
     <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>
   </svg>
@@ -41,6 +41,201 @@ const MsgIcon   = () => <svg viewBox="0 0 24 24" style={{ width: 18, height: 18,
 const ChevronUpIcon = () => <svg viewBox="0 0 24 24" style={{ width: 14, height: 14, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}><polyline points="18 15 12 9 6 15"/></svg>
 const ChevronDownIcon = () => <svg viewBox="0 0 24 24" style={{ width: 14, height: 14, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}><polyline points="6 9 12 15 18 9"/></svg>
 
+const CommentItem = ({ comment, onDelete, videoId }) => {
+  const { user } = useAuth()
+  const toast = useToast()
+  const [showReplyForm, setShowReplyForm] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [replies, setReplies] = useState([])
+  const [showReplies, setShowReplies] = useState(false)
+  const [loadingReplies, setLoadingReplies] = useState(false)
+  const [replying, setReplying] = useState(false)
+
+  // Like/Dislike state for comment
+  const [liked, setLiked] = useState(comment.isLiked || false)
+  const [disliked, setDisliked] = useState(comment.isDisliked || false)
+  const [likesCount, setLikesCount] = useState(comment.likesCount || 0)
+  const [dislikesCount, setDislikesCount] = useState(comment.dislikesCount || 0)
+  const [submittingLike, setSubmittingLike] = useState(false)
+
+  const loadReplies = async () => {
+    if (showReplies) {
+      setShowReplies(false)
+      return
+    }
+    setLoadingReplies(true)
+    try {
+      const { data } = await api.get(`/comments/replies/${comment._id}`)
+      setReplies(data?.data || [])
+      setShowReplies(true)
+    } catch {
+      toast({ message: 'Failed to load replies', type: 'error' })
+    } finally {
+      setLoadingReplies(false)
+    }
+  }
+
+  const handleReply = async (e) => {
+    e.preventDefault()
+    if (!replyText.trim()) return
+    setReplying(true)
+    try {
+      const { data } = await api.post(`/comments/${videoId}`, { 
+        commentContent: replyText, 
+        parentComment: comment._id 
+      })
+
+      // Add default social metadata to local new comment
+      const newReply = {
+          ...data?.data,
+          likesCount: 0,
+          dislikesCount: 0,
+          isLiked: false,
+          isDisliked: false
+      }
+
+      setReplies(prev => [...prev, newReply])
+      setReplyText('')
+      setShowReplyForm(false)
+      setShowReplies(true)
+      toast({ message: 'Reply posted', type: 'success' })
+    } catch {
+      toast({ message: 'Failed to post reply', type: 'error' })
+    } finally {
+      setReplying(false)
+    }
+  }
+
+  const handleLike = async (isDislikeAction) => {
+    if (!user) { toast({ message: `Sign in to ${isDislikeAction ? 'dislike' : 'like'} comments`, type: 'error' }); return }
+    if (submittingLike) return
+    setSubmittingLike(true)
+    try {
+      await api.post(`/likes/toggle/c/${comment._id}?isDislike=${isDislikeAction}`)
+      
+      if (isDislikeAction) {
+        setDisliked(prev => {
+           const next = !prev
+           setDislikesCount(c => next ? c + 1 : c - 1)
+           return next
+        })
+        if (liked) {
+          setLiked(false)
+          setLikesCount(c => c - 1)
+        }
+      } else {
+        setLiked(prev => {
+          const next = !prev
+          setLikesCount(c => next ? c + 1 : c - 1)
+          return next
+        })
+        if (disliked) {
+          setDisliked(false)
+          setDislikesCount(c => c - 1)
+        }
+      }
+    } catch {
+      toast({ message: 'Failed to toggle like', type: 'error' })
+    } finally {
+      setSubmittingLike(false)
+    }
+  }
+
+  return (
+    <div className="comment-item" style={{ marginTop: 16 }}>
+      <Avatar src={comment.owner?.avatar} name={comment.owner?.username} size={36} />
+      <div className="comment-content">
+        <div className="comment-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <span className="comment-author">@{comment.owner?.username || 'user'}</span>
+            <span className="comment-time">{formatTimeAgo(comment.createdAt)}</span>
+          </div>
+          {user?._id === comment.owner?._id && (
+             <button onClick={() => onDelete(comment._id)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }} title="Delete">
+               <TrashIcon />
+             </button>
+          )}
+        </div>
+        <p className="comment-text" style={{ whiteSpace: 'pre-wrap' }}>{comment.content || comment.commentContent}</p>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button 
+              onClick={() => handleLike(false)}
+              className={`comment-likes ${liked ? 'active' : ''}`} 
+              style={{ display: 'flex', gap: 6, alignItems: 'center', background: 'none', border: 'none', color: liked ? 'var(--blue)' : 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
+            >
+              <ThumbUpIcon filled={liked} /> 
+              <span style={{ fontSize: 13 }}>{likesCount}</span>
+            </button>
+            <button 
+              onClick={() => handleLike(true)}
+              className={`comment-likes ${disliked ? 'active' : ''}`} 
+              style={{ display: 'flex', gap: 6, alignItems: 'center', background: 'none', border: 'none', color: disliked ? 'var(--red)' : 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
+            >
+              <ThumbDownIcon filled={disliked} /> 
+              <span style={{ fontSize: 13 }}>{dislikesCount}</span>
+            </button>
+          </div>
+          <button 
+            onClick={() => { if (!user) { toast({message:'Sign in to reply', type:'error'}); return; }; setShowReplyForm(!showReplyForm) }}
+            style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            Reply
+          </button>
+        </div>
+
+        {showReplyForm && (
+          <form onSubmit={handleReply} style={{ marginTop: 12, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+             <Avatar src={user?.avatar} name={user?.username} size={28} />
+             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <textarea
+                   className="comment-textarea"
+                   rows={1}
+                   placeholder="Add a reply..."
+                   value={replyText}
+                   onChange={e => setReplyText(e.target.value)}
+                   autoFocus
+                   style={{ fontSize: 13 }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                   <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowReplyForm(false)} style={{ fontSize: 12, padding: '4px 10px' }}>Cancel</button>
+                   <button type="submit" className="btn btn-primary btn-sm" disabled={replying || !replyText.trim()} style={{ fontSize: 12, padding: '4px 10px' }}>
+                     {replying ? 'Replying...' : 'Reply'}
+                   </button>
+                </div>
+             </div>
+          </form>
+        )}
+
+        <button 
+           onClick={loadReplies}
+           style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--blue)', background: 'none', border: 'none', marginTop: 12, padding: '4px 8px', borderRadius: 16, cursor: 'pointer', fontSize: 13, fontWeight: 500 }}
+        >
+           {loadingReplies ? <Spinner size={14} /> : (showReplies ? <ChevronUpIcon /> : <ChevronDownIcon />)}
+           {showReplies ? 'Hide replies' : 'View replies'}
+        </button>
+
+        {showReplies && replies.length > 0 && (
+          <div style={{ marginTop: 12, borderLeft: '2px solid var(--border)', paddingLeft: 16 }}>
+             {replies.map(reply => (
+                <div key={reply._id} style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
+                   <Avatar src={reply.owner?.avatar} name={reply.owner?.username} size={28} />
+                   <div style={{ flex: 1 }}>
+                      <div className="comment-header" style={{ marginBottom: 4 }}>
+                        <span className="comment-author" style={{ fontSize: 13 }}>@{reply.owner?.username || 'user'}</span>
+                        <span className="comment-time" style={{ fontSize: 12 }}>{formatTimeAgo(reply.createdAt)}</span>
+                      </div>
+                      <p className="comment-text" style={{ fontSize: 13, marginTop: 2, whiteSpace: 'pre-wrap' }}>{reply.content}</p>
+                   </div>
+                </div>
+             ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Watch() {
   const { videoId } = useParams()
   const { user }    = useAuth()
@@ -52,10 +247,14 @@ export default function Watch() {
   const [related, setRelated]  = useState([])
   const [loading, setLoading]  = useState(true)
   const [liked, setLiked]      = useState(false)
+  const [disliked, setDisliked] = useState(false)
+  const [likesCount, setLikesCount] = useState(0)
+  const [dislikesCount, setDislikesCount] = useState(0)
   const [subscribed, setSub]   = useState(false)
   const [commentText, setCommentText] = useState('')
   const [commenting, setCommenting]   = useState(false)
   const [likeSubmitting, setLikeSubmitting] = useState(false)
+  const [dislikeSubmitting, setDislikeSubmitting] = useState(false)
   const [subSubmitting, setSubSubmitting] = useState(false)
   const [descExpanded, setDescExpanded] = useState(false)
   const commentRef = useRef(null)
@@ -77,10 +276,18 @@ export default function Watch() {
     api.get(`/videos/${videoId}`)
       .then(({ data }) => {
         if (!isMounted) return;
-        setVideo(data?.data || null)
+        const v = data?.data || null
+        setVideo(v)
+        if (v) {
+          setLiked(v.isLiked || false)
+          setDisliked(v.isDisliked || false)
+          setLikesCount(v.likesCount || 0)
+          setDislikesCount(v.dislikesCount || 0)
+          setSub(v.owner?.isSubscribed || false)
+        }
         
         // ── 2. Load comments and related ONLY if video exists ───────────
-        if (data?.data) {
+        if (v) {
           api.get(`/comments/${videoId}?limit=50`)
             .then(({ data: resData }) => { if (isMounted) setComments(resData?.data?.docs || resData?.data || []) })
             .catch(() => {})
@@ -109,13 +316,50 @@ export default function Watch() {
     if (likeSubmitting) return;
     setLikeSubmitting(true);
     try {
-      await api.post(`/likes/toggle/v/${videoId}`)
-      setLiked(p => !p)
+      await api.post(`/likes/toggle/v/${videoId}?isDislike=false`)
+      
+      setLiked(prev => {
+        const next = !prev;
+        setLikesCount(c => next ? c + 1 : c - 1);
+        return next;
+      });
+
+      if (disliked) {
+        setDisliked(false);
+        setDislikesCount(c => c - 1);
+      }
+      
       toast({ message: liked ? 'Like removed' : 'Video liked!', type: 'success' })
     } catch (err) {
       toast({ message: getErrorMessage(err), type: 'error' })
     } finally {
       setLikeSubmitting(false);
+    }
+  }
+
+  const handleDislike = async () => {
+    if (!user) { toast({ message: 'Sign in to dislike videos', type: 'error' }); return }
+    if (dislikeSubmitting) return;
+    setDislikeSubmitting(true);
+    try {
+      await api.post(`/likes/toggle/v/${videoId}?isDislike=true`)
+      
+      setDisliked(prev => {
+        const next = !prev;
+        setDislikesCount(c => next ? c + 1 : c - 1);
+        return next;
+      });
+
+      if (liked) {
+        setLiked(false);
+        setLikesCount(c => c - 1);
+      }
+
+      toast({ message: disliked ? 'Dislike removed' : 'Video disliked', type: 'success' })
+    } catch (err) {
+      toast({ message: getErrorMessage(err), type: 'error' })
+    } finally {
+      setDislikeSubmitting(false);
     }
   }
 
@@ -282,13 +526,19 @@ export default function Watch() {
           {/* Actions */}
           <div className="video-action-row">
             <div className="like-pill">
-              <button className={`like-half ${liked ? 'liked' : ''}`} onClick={handleLike}>
+              <button className={`like-half ${liked ? 'liked' : ''}`} onClick={handleLike} title="I like this">
                 <ThumbUpIcon filled={liked} />
-                {liked ? 'Liked' : 'Like'}
+                <span style={{ minWidth: 20 }}>{formatViews(likesCount)}</span>
               </button>
               <div className="like-sep" />
-              <button className="like-half">
-                <ThumbDownIcon />
+              <button 
+                className={`like-half ${disliked ? 'disliked' : ''}`} 
+                onClick={handleDislike} 
+                title="I dislike this"
+                style={{ color: disliked ? 'var(--red)' : '' }}
+              >
+                <ThumbDownIcon filled={disliked} />
+                <span style={{ minWidth: 20 }}>{formatViews(dislikesCount)}</span>
               </button>
             </div>
             <button className="btn btn-secondary btn-sm" onClick={handleShare}>
@@ -346,26 +596,7 @@ export default function Watch() {
 
           <div>
             {comments.map(c => (
-              <div key={c._id} className="comment-item">
-                <Avatar src={c.owner?.avatar} name={c.owner?.username} size={36} />
-                <div className="comment-content">
-                  <div className="comment-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <span className="comment-author">@{c.owner?.username || 'user'}</span>
-                      <span className="comment-time">{formatTimeAgo(c.createdAt)}</span>
-                    </div>
-                    {user?._id === c.owner?._id && (
-                       <button onClick={() => handleDeleteComment(c._id)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }} title="Delete">
-                         <TrashIcon />
-                       </button>
-                    )}
-                  </div>
-                  <p className="comment-text">{c.content || c.commentContent}</p>
-                  <button className="comment-likes">
-                    <ThumbUpIcon /> 0
-                  </button>
-                </div>
-              </div>
+              <CommentItem key={c._id} comment={c} onDelete={handleDeleteComment} videoId={videoId} />
             ))}
             {comments.length === 0 && (
               <p style={{ color: 'var(--text-muted)', fontSize: 14, padding: '20px 0' }}>No comments yet. Be first!</p>

@@ -12,40 +12,54 @@ import {triggerNotification} from "../utils/notification.js"
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
-    // TODO: Toggle like on video
+    const { isDislike = false } = req.query; // Default to false if not provided
+
     if (!isValidObjectId(videoId)) {
-        throw new ApiError(404, "Invalid video id provided");
+        throw new ApiError(400, "Invalid video ID");
     }
 
     try {
-
-        // Check if the user has already liked the video
-    
-        const existingLike = await Like.findOne({ video: videoId, likedBy: req.user._id });
+        const existingLike = await Like.findOne({
+            video: videoId,
+            likedBy: req.user._id
+        });
 
         if (existingLike) {
-            // User has already liked the video, remove the like
-            await Like.deleteOne({ _id: existingLike._id });
-            res.status(200).json(new ApiResponse(200, null, "Like removed successfully"));
-        } else {
-            // User has not liked the video, add the like
-            const newLike = await Like.create({ video: videoId , likedBy: req.user._id , });
+            // Case 1: Toggling the same action (e.g., clicking Like when already Liked)
+            if (existingLike.isDislike.toString() === isDislike.toString()) {
+                await Like.deleteOne({ _id: existingLike._id });
+                return res.status(200).json(new ApiResponse(200, null, `${isDislike === "true" ? "Dislike" : "Like"} removed`));
+            } 
             
-            // Trigger Notification
-            const video = await Video.findById(videoId);
-            if (video) {
-                await triggerNotification({
-                    type: "LIKE",
-                    recipient: video.owner,
-                    sender: req.user._id,
-                    video: videoId
-                });
+            // Case 2: Switching from Like to Dislike or vice-versa
+            existingLike.isDislike = (isDislike === "true");
+            await existingLike.save();
+            return res.status(200).json(new ApiResponse(200, existingLike, `Switched to ${isDislike === "true" ? "Dislike" : "Like"}`));
+        } else {
+            // Case 3: Brand new Like/Dislike
+            const newLike = await Like.create({
+                video: videoId,
+                likedBy: req.user._id,
+                isDislike: (isDislike === "true")
+            });
+
+            // Trigger Notification ONLY for Likes
+            if (isDislike !== "true") {
+                const video = await Video.findById(videoId);
+                if (video) {
+                    await triggerNotification({
+                        type: "LIKE",
+                        recipient: video.owner,
+                        sender: req.user._id,
+                        video: videoId
+                    });
+                }
             }
 
-            res.status(200).json(new ApiResponse(200, newLike, "Like added successfully"));
+            return res.status(200).json(new ApiResponse(200, newLike, `${isDislike === "true" ? "Dislike" : "Like"} added`));
         }
     } catch (error) {
-        throw new ApiError(500, error, "Some error occurred while toggling video like: Try again later");
+        throw new ApiError(500, error?.message || "Internal server error toggling video like");
     }
 });//DONE!
 
@@ -54,39 +68,50 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
     const { commentId } = req.params;
-    // TODO: Toggle like on comment
+    const { isDislike = false } = req.query;
+
     if (!isValidObjectId(commentId)) {
-        throw new ApiError(404, "Invalid commentId");
+        throw new ApiError(400, "Invalid comment ID");
     }
 
     try {
-        // Check if the user has already liked the comment
-        const existingLike = await Like.findOne({ comment: commentId , likedBy:req.user._id});
+        const existingLike = await Like.findOne({
+            comment: commentId,
+            likedBy: req.user._id
+        });
 
         if (existingLike) {
-            // User has already liked the comment, remove the like
-            await Like.deleteOne({ _id: existingLike._id });
-            res.status(200).json(new ApiResponse(200, null, "Like removed successfully"));
+            if (existingLike.isDislike.toString() === isDislike.toString()) {
+                await Like.deleteOne({ _id: existingLike._id });
+                return res.status(200).json(new ApiResponse(200, null, `${isDislike === "true" ? "Dislike" : "Like"} removed`));
+            }
+            existingLike.isDislike = (isDislike === "true");
+            await existingLike.save();
+            return res.status(200).json(new ApiResponse(200, existingLike, `Switched to ${isDislike === "true" ? "Dislike" : "Like"}`));
         } else {
-            // User has not liked the comment, add the like
-            const newLike = await Like.create({ comment: commentId , likedBy:req.user._id });
+            const newLike = await Like.create({
+                comment: commentId,
+                likedBy: req.user._id,
+                isDislike: (isDislike === "true")
+            });
 
-            // Trigger Notification
-            const comment = await Comment.findById(commentId);
-            if (comment) {
-                await triggerNotification({
-                    type: "LIKE",
-                    recipient: comment.owner,
-                    sender: req.user._id,
-                    video: comment.video,
-                    comment: commentId
-                });
+            if (isDislike !== "true") {
+                const comment = await Comment.findById(commentId);
+                if (comment) {
+                    await triggerNotification({
+                        type: "LIKE",
+                        recipient: comment.owner,
+                        sender: req.user._id,
+                        video: comment.video,
+                        comment: commentId
+                    });
+                }
             }
 
-            res.status(200).json(new ApiResponse(200, newLike, "Like added successfully"));
+            return res.status(200).json(new ApiResponse(200, newLike, `${isDislike === "true" ? "Dislike" : "Like"} added`));
         }
     } catch (error) {
-        throw new ApiError(500, error, "Some error occurred while toggling comment like: Try again later");
+        throw new ApiError(500, error?.message || "Internal server error toggling comment like");
     }
 });//DONE!
 
@@ -95,37 +120,48 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 
 const toggleTweetLike = asyncHandler(async (req, res) => {
     const { tweetId } = req.params;
-    // TODO: Toggle like on tweet
+    const { isDislike = false } = req.query;
+
     if (!isValidObjectId(tweetId)) {
-        throw new ApiError(404, "Invalid tweetId provided: Provide a valid tweet id");
+        throw new ApiError(400, "Invalid tweet ID");
     }
 
     try {
-        // Check if the user has already liked the tweet
-        const existingLike = await Like.findOne({ tweet: tweetId, likedBy: req.user._id });
+        const existingLike = await Like.findOne({
+            tweet: tweetId,
+            likedBy: req.user._id
+        });
 
         if (existingLike) {
-            // User has already liked the tweet, remove the like
-            await Like.deleteOne({ _id: existingLike._id });
-            res.status(200).json(new ApiResponse(200, null, "Like removed successfully"));
+            if (existingLike.isDislike.toString() === isDislike.toString()) {
+                await Like.deleteOne({ _id: existingLike._id });
+                return res.status(200).json(new ApiResponse(200, null, `${isDislike === "true" ? "Dislike" : "Like"} removed`));
+            }
+            existingLike.isDislike = (isDislike === "true");
+            await existingLike.save();
+            return res.status(200).json(new ApiResponse(200, existingLike, `Switched to ${isDislike === "true" ? "Dislike" : "Like"}`));
         } else {
-            // User has not liked the tweet, add the like
-            const newLike = await Like.create({ tweet: tweetId, likedBy:req.user._id });
+            const newLike = await Like.create({
+                tweet: tweetId,
+                likedBy: req.user._id,
+                isDislike: (isDislike === "true")
+            });
 
-            // Trigger Notification
-            const tweet = await Tweet.findById(tweetId);
-            if (tweet) {
-                await triggerNotification({
-                    type: "LIKE",
-                    recipient: tweet.owner,
-                    sender: req.user._id,
-                });
+            if (isDislike !== "true") {
+                const tweet = await Tweet.findById(tweetId);
+                if (tweet) {
+                    await triggerNotification({
+                        type: "LIKE",
+                        recipient: tweet.owner,
+                        sender: req.user._id,
+                    });
+                }
             }
 
-            res.status(200).json(new ApiResponse(200, newLike, "Like added successfully"));
+            return res.status(200).json(new ApiResponse(200, newLike, `${isDislike === "true" ? "Dislike" : "Like"} added`));
         }
     } catch (error) {
-        throw new ApiError(500, error, "Some error occurred while toggling tweet like: Try again later");
+        throw new ApiError(500, error?.message || "Internal server error toggling tweet like");
     }
 });//DONE!
 
@@ -133,53 +169,86 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 /*--------------------getLikesVideos------------------*/
 
 const getLikedVideos = asyncHandler(async (req, res) => {
-    //TODO: get all liked videos
     try {
-        const likedVideos = await Like.find({ video: { $ne: null }, likedBy: req.user._id }) // find all liked videos so pass without any argument
-    
-        if (!likedVideos || likedVideos.length === 0) {
-            throw new ApiError(404, "No liked videos found")
-        }
-    
-        res
-       .status(200)
-       .json(new ApiResponse(200, likedVideos, "Liked videos fetched successfully"))
+        const likedVideos = await Like.aggregate([
+            {
+                $match: {
+                    likedBy: new mongoose.Types.ObjectId(req.user._id),
+                    video: { $exists: true, $ne: null },
+                    isDislike: false // Only show actual likes in "Liked Videos"
+                }
+            },
+            {
+                $lookup: {
+                    from: "videos",
+                    localField: "video",
+                    foreignField: "_id",
+                    as: "video"
+                }
+            },
+            {
+                $unwind: "$video"
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "video.owner",
+                    foreignField: "_id",
+                    as: "video.owner"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$video.owner",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+                    _id: "$video._id",
+                    title: "$video.title",
+                    description: "$video.description",
+                    thumbnail: "$video.thumbnail",
+                    duration: "$video.duration",
+                    views: "$video.views",
+                    createdAt: "$video.createdAt",
+                    owner: {
+                        _id: "$video.owner._id",
+                        username: "$video.owner.username",
+                        fullName: "$video.owner.fullName",
+                        avatar: "$video.owner.avatar"
+                    }
+                }
+            }
+        ]);
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, likedVideos, "Liked videos fetched successfully"));
     } catch (error) {
-        throw new ApiError(500, error, "Some error occured while getting liked videos")
+        throw new ApiError(500, error?.message || "Some error occured while getting liked videos");
     }
-})//DONE!
+});
 
 
 const getLikedComments = asyncHandler(async (req, res) => {
-    // TODO: Get all liked comments
     try {
-        const likedComments = await Like.find({ comment: { $ne: null } , likedBy: req.user._id}); // Find documents where the "comment" field is not empty
-        
-        if (!likedComments || likedComments.length === 0) {
-            throw new ApiError(404, "No liked comments found");
-        }
-    
-        res.status(200).json(new ApiResponse(200, likedComments, "Liked comments fetched successfully"));
+        const likedComments = await Like.find({ comment: { $ne: null }, likedBy: req.user._id }).populate("comment");
+        return res.status(200).json(new ApiResponse(200, likedComments, "Liked comments fetched successfully"));
     } catch (error) {
-        throw new ApiError(500, error, "Some error occurred while getting liked comments");
+        throw new ApiError(500, error?.message || "Some error occurred while getting liked comments");
     }
-});//DONE!
+});
 
 
 const getLikedTweets = asyncHandler(async (req, res) => {
-    // TODO: Get all liked tweets
     try {
-        const likedTweets = await Like.find({ tweet: { $ne: null }, likedBy: req.user._id}); // Find documents where the "tweet" field is not empty
-        
-        if (!likedTweets || likedTweets.length === 0) {
-            throw new ApiError(404, "No liked tweets found");
-        }
-    
-        res.status(200).json(new ApiResponse(200, likedTweets, "Liked tweets fetched successfully"));
+        const likedTweets = await Like.find({ tweet: { $ne: null }, likedBy: req.user._id, isDislike: false }).populate("tweet");
+        return res.status(200).json(new ApiResponse(200, likedTweets, "Liked tweets fetched successfully"));
     } catch (error) {
-        throw new ApiError(500, error, "Some error occurred while getting liked tweets");
+        throw new ApiError(500, error?.message || "Some error occurred while getting liked tweets");
     }
-});//DONE!
+});
 
 
 export {
@@ -190,19 +259,3 @@ export {
     getLikedComments,
     getLikedTweets
 }
-
-
-//------------------DEFINITION--------------------------------
-/*
-In the provided code, Like.find() is a method call made on the Mongoose model Like. 
-Here's what it does:
-
-Like.find(): This Mongoose method is used to find documents in the Like 
-collection that match the specified criteria. When called without any
-arguments, it returns all documents in the collection.
-
-After executing Like.find(), the returned value will be an array containing 
-all the liked video documents found in the Like collection. This array
-will be assigned to the videos variable in the code, 
-which can then be processed further or sent back as a response to the clie
-*/

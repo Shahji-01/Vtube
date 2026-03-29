@@ -11,35 +11,9 @@ export default function Subscriptions() {
     setLoading(true)
     setError(null)
     
-    // Custom endpoint needed, or client-side aggregation
-    // Wait, the backend doesn't have a direct /videos/subscriptions endpoint. 
-    // We can fetch all channels the user is subscribed to, then fetch their videos.
-    // However, if the backend has: api.get('/subscriptions/c/'+subscriberId) ? 
-    // Let's check what the backend returns for GET /subscriptions/u/:subscriberId
-    
-    // First, try to fetch channels we are subscribed to
-    api.get('/subscriptions/channels') 
-      .then(async ({ data: subData }) => {
-        // Since backend might not have this exact structure, we fallback to a unified video load
-        // Actually, fetching all and randomizing for UX, or just fetching /videos with a query
-        // Normally, a real app has a curated feed endpoint.
-        // As a fallback, we fetch standard videos for now if custom feed doesn't exist
-        
-        try {
-            // Attempt to fetch custom feed if your backend has it
-            const { data } = await api.get('/videos?isSubscribed=true')
-            setVideos(data?.data?.docs || data?.data || [])
-        } catch {
-            // Drop back to recommended generic feed if the specialized query fails
-            const fallback = await api.get('/videos?limit=30')
-            setVideos(fallback.data?.data?.docs || fallback.data?.data || [])
-        }
-      })
-      .catch(() => {
-          api.get('/videos?limit=30')
-            .then(({ data }) => setVideos(data?.data?.docs || data?.data || []))
-            .catch(() => setError('Failed to load subscriptions'))
-      })
+    api.get('/subscriptions/videos')
+      .then(({ data }) => setVideos(data?.data || []))
+      .catch(() => setError('Failed to load subscriptions feed'))
       .finally(() => setLoading(false))
   }, [])
 

@@ -7,7 +7,7 @@ import VideoCard, { VideoCardSkeleton } from '../components/VideoCard'
 
 export default function Library() {
   const { user } = useAuth()
-  const { showToast } = useToast()
+  const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get('tab') || 'history'
 
@@ -30,7 +30,7 @@ export default function Library() {
     let endpoint = ''
     if (activeTab === 'history') endpoint = '/users/history'
     if (activeTab === 'liked')   endpoint = '/likes/videos'
-    if (activeTab === 'tweets')  endpoint = '/tweets/'
+    if (activeTab === 'tweets')  endpoint = `/tweets/user/${user._id}`
 
     api.get(endpoint)
       .then(({ data: d }) => setData(d?.data?.docs || d?.data || []))
@@ -47,11 +47,21 @@ export default function Library() {
     try {
       await api.delete('/users/history')
       setData([])
-      showToast('Watch history cleared', 'success')
+      toast({ message: 'Watch history cleared', type: 'success' })
     } catch (err) {
-      showToast('Failed to clear history', 'error')
+      toast({ message: 'Failed to clear history', type: 'error' })
     } finally {
       setClearing(false)
+    }
+  }
+
+  const handleRemoveFromHistory = async (videoId) => {
+    try {
+      await api.delete(`/users/history/${videoId}`)
+      setData(prev => prev.filter(v => v._id !== videoId))
+      toast({ message: 'Removed from history', type: 'success' })
+    } catch {
+      toast({ message: 'Failed to remove from history', type: 'error' })
     }
   }
 
@@ -118,9 +128,52 @@ export default function Library() {
         </div>
       ) : (
         <div className="video-grid">
-          {data.map(v => <VideoCard key={v._id} video={v} />)}
+          {data.map(v => (
+            <div key={v._id} style={{ position: 'relative' }} className="history-card-wrapper">
+              <VideoCard video={v} />
+              {activeTab === 'history' && (
+                <button 
+                  className="remove-history-btn" 
+                  onClick={() => handleRemoveFromHistory(v._id)}
+                  title="Remove from history"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+          ))}
         </div>
       )}
+
+      <style>{`
+        .history-card-wrapper .remove-history-btn {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          background: rgba(0, 0, 0, 0.7);
+          color: white;
+          border: none;
+          border-radius: 50%;
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          opacity: 0;
+          transition: all 0.2s ease;
+          z-index: 10;
+        }
+        .history-card-wrapper:hover .remove-history-btn {
+          opacity: 1;
+        }
+        .remove-history-btn:hover {
+          background: var(--red);
+          transform: scale(1.1);
+        }
+      `}</style>
     </>
   )
 }

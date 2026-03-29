@@ -17,7 +17,7 @@ export default function Settings() {
   const toast = useToast()
   
   const [profileForm, setProfileForm] = useState({ fullName: user?.fullName || '', email: user?.email || '' })
-  const [passForm, setPassForm]       = useState({ oldPassword: '', newPassword: '' })
+  const [passForm, setPassForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' })
   
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [loadingPass, setLoadingPass]       = useState(false)
@@ -44,13 +44,16 @@ export default function Settings() {
 
   const handlePasswordUpdate = async (e) => {
     e.preventDefault()
-    if (!passForm.oldPassword || !passForm.newPassword) {
-      return toast({ message: 'Both password fields required', type: 'error' })
+    if (!passForm.oldPassword || !passForm.newPassword || !passForm.confirmPassword) {
+      return toast({ message: 'All password fields are required', type: 'error' })
+    }
+    if (passForm.newPassword !== passForm.confirmPassword) {
+      return toast({ message: 'New passwords do not match', type: 'error' })
     }
     setLoadingPass(true)
     try {
       await api.post('/users/change-password', passForm)
-      setPassForm({ oldPassword: '', newPassword: '' })
+      setPassForm({ oldPassword: '', newPassword: '', confirmPassword: '' })
       toast({ message: 'Password changed successfully!', type: 'success' })
     } catch (err) {
       toast({ message: err?.response?.data?.message || 'Password update failed', type: 'error' })
@@ -198,6 +201,16 @@ export default function Settings() {
                 placeholder="Enter new password"
                 value={passForm.newPassword}
                 onChange={e => setPassForm(f => ({ ...f, newPassword: e.target.value }))}
+              />
+            </div>
+            <div className="input-group">
+              <label className="input-label">Confirm New Password</label>
+              <input 
+                type="password"
+                className="input" 
+                placeholder="Confirm new password"
+                value={passForm.confirmPassword}
+                onChange={e => setPassForm(f => ({ ...f, confirmPassword: e.target.value }))}
               />
             </div>
             <div>

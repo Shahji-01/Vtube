@@ -21,6 +21,10 @@ const likeSchema = new Schema(
         {
             type:Schema.Types.ObjectId,
             ref:"User"
+        },
+        isDislike: {
+            type: Boolean,
+            default: false
         }
 
     },{timestamps:true})

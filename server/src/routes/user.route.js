@@ -11,10 +11,11 @@ import {
         updateUserCoverImage, 
         getUserChannelProfile, 
         getWatchHistory,
-        clearWatchHistory
+        clearWatchHistory,
+        removeVideoFromWatchHistory
     } from "../controllers/user.controller.js";
 import {upload} from "../middlewares/multer.middleware.js"
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { verifyJWT, optionalJWT } from "../middlewares/auth.middleware.js";
 const router = Router();
 
 // ------ register user
@@ -62,11 +63,15 @@ router
 
 router
 .route("/c/:username")
-.get(verifyJWT, getUserChannelProfile) // here we added route as username same as we have in channelprofile bcz we are getting this in userChannel thoru req.params i.e url
+.get(optionalJWT, getUserChannelProfile) // public — optionalJWT attaches req.user if logged in (for isSubscribed)
 
 router
 .route("/history")
-.get(verifyJWT,getWatchHistory)
+.get(verifyJWT, getWatchHistory)
 .delete(verifyJWT, clearWatchHistory)
+
+router
+.route("/history/:video_Id")
+.delete(verifyJWT, removeVideoFromWatchHistory)
 
 export default  router ;

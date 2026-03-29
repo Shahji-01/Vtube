@@ -8,14 +8,14 @@ import {
     togglePublishStatus,
     updateVideo,
 } from "../controllers/video.controller.js"
-import {verifyJWT} from "../middlewares/auth.middleware.js"
+import {verifyJWT, optionalJWT} from "../middlewares/auth.middleware.js"
 import {upload} from "../middlewares/multer.middleware.js"
 import {cacheMiddleware} from "../utils/cache.js"
 
 const router = Router();
 
 // ── Public routes (no auth required) ─────────────────────────────────
-router.route("/").get(cacheMiddleware(60), getAllVideos);
+router.route("/").get(optionalJWT, cacheMiddleware(60), getAllVideos);
 router.route("/stream/:video_Id").get(streamVideo);
 
 // ── Protected write routes ────────────────────────────────────────────
@@ -29,7 +29,7 @@ router.route("/").post(
 );
 
 router.route("/:video_Id")
-    .get(getVideoById)                                    // public read
+    .get(optionalJWT, getVideoById)                       // public read + optional auth for history
     .delete(verifyJWT, deleteVideo)                       // protected delete
     .patch(verifyJWT, upload.single("thumbnail"), updateVideo); // protected update
 

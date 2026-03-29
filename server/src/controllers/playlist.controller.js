@@ -27,10 +27,9 @@ const createPlaylist = asyncHandler(async (req, res) => {
            )
 
         if (!newPlaylist) {
-            throw new ApiError(404, "Could not create playlist with info:")
+            throw new ApiError(404, "Could not create playlist")
         }
 
-        console.log("2")
         res
         .status(201)
         .json(new ApiResponse(201, newPlaylist, "Playlist created successfully"))
@@ -52,17 +51,12 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
 
     try {
         const userPlaylists = await Playlist.find({owner:userId})
-
         
-        if (!userPlaylists || userPlaylists.length === 0) {
-            throw new ApiError(404, `No playlists exist for user ${userId}`)
-        }
-
         res
        .status(200)
         .json(new ApiResponse(200, userPlaylists, "User playlists fetched successfully"))
     } catch (error) {
-        throw new ApiError(500, error, "An error while fetching user playlists : try again later")
+        throw new ApiError(500, error?.message || "An error while fetching user playlists")
     }
 })//DONE!
 
@@ -135,10 +129,8 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         );
         
 
-        console.log(videoAddedPlaylist, "videoAddedPlaylist")
-
         if (!videoAddedPlaylist || videoAddedPlaylist.length === 0) {
-            throw new ApiError(404, "No videos to add in playlist")
+            throw new ApiError(404, "Could not add video to playlist")
         }
 
         res
@@ -183,7 +175,6 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
          // Save the modified playlist
          await playlistWithoutVideo.save();
 
-         console.log(playlistWithoutVideo, "3")
         res
         .status(200)
         .json(new ApiResponse(200, playlistWithoutVideo, "Video is removed from playlist"))
@@ -213,7 +204,7 @@ const deletePlaylist = asyncHandler(async (req, res) => {
        
         res
         .status(200)
-        .json(new ApiResponse(200, deletePlaylist, "Playlist deleted successfully"))
+        .json(new ApiResponse(200, deletedPlaylist, "Playlist deleted successfully"))
 
     } catch (error) {
         throw new ApiError(500, error, "An error occurred while deleting playlist")
@@ -245,14 +236,10 @@ const updatePlaylist = asyncHandler(async (req, res) => {
             {new: true, validateBeforeSave: false},
         )
         
-        console.log(updatedPlaylist, "Playlist to be updated")
-
         if (!updatedPlaylist) {
-            throw new ApiError(404, "Could not fund Playlist to update")
+            throw new ApiError(404, "Could not find Playlist to update")
         }
         
-        console.log(updatedPlaylist, "updated Playlist")
-
         res
         .status(200)
         .json(new ApiResponse(200, updatedPlaylist, "Playlist updated"))

@@ -9,39 +9,40 @@ import { User } from "../models/user.model.js";
 
 
 export const verifyJWT = asyncHandler(async (req, _, next) => {
-   //Access token from cookies if  available
-   //In case of mobile users, tokens are sent in headers, replace("Bearer ", "") Bearer and a single space wiht empty string bcz from client side, Authorization: Bearer <token> ,token is accesstoken
-   //For more information on JSON Web Tokens, visit: https://jwt.io/introduction 
-   
    try {
      const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
 
-     console.log(token, "access token from cookies auth middleware remove me if done");
-
      if (!token) {
-             console.log("token from cookies auth middle")
-         throw new ApiError(401, "Unathorized Request")
+         throw new ApiError(401, "Unauthorized Request")
      }
 
-     // -------------------------------decode token using secret access key 
-     const decodedToken =  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-     //console.log(decodedToken, "decodedAccessToken from secret authmiddleware remove me if done");
-     
-     // ----- get user by id that we have set in userSchema as jwt.sign _id
+     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
      const user = await User.findById(decodedToken?._id).select("-password -refreshToken");
      if (!user) {
-         throw new ApiError(401, "Invalid  access token")
+         throw new ApiError(401, "Invalid access token")
      }
  
-     //add object to request name user and value user(that we found here using byid)
      req.user = user;  
-     next(); // flag for nex
+     next();
    } 
    catch (error) {
-     throw new ApiError(401, error?.message || "invalid access token");
+     throw new ApiError(401, error?.message || "Invalid access token");
    } 
 })
 
 
-
-// -------used in roiutes
+// Optional JWT — attaches req.user if a valid token is present, but NEVER blocks the request.
+// Use this on public routes that also need to track the authenticated user (e.g. views/history).
+export const optionalJWT = async (req, res, next) => {
+  try {
+    const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
+    if (token) {
+      const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
+      const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
+      if (user) req.user = user
+    }
+  } catch {
+    // Token invalid or expired — just continue as a guest, don't throw.
+  }
+  next()
+}
