@@ -246,7 +246,7 @@ export default function Watch() {
                 autoplay: true, 
                 controls: true, 
                 responsive: true,
-                sources: [{ src: secureVideoUrl(video.videoFile) }] 
+                sources: [{ src: secureVideoUrl(video.videoFile), type: 'video/mp4' }] 
              }} 
              poster={secureUrl(video.thumbnail)} 
           />
