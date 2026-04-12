@@ -63,10 +63,5 @@ Bcrypt is a library used for hashing passwords, adding an extra layer of securit
 ### API Documentation
 API documentation can be found in the `docs` directory of this repository.
 
-### Contributors
-- Mayank Soni: Project lead and primary developer
-- Hitesh Chaudhary Aka Chai aur Code: [Guide and tutor](https://youtu.be/EH3vGeqeIAo?feature=shared)
-
-
 ### Frontend
 The frontend for this project is currently under development. It will be built using React and Axios for making HTTP requests to the backend API.
