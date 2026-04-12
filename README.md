@@ -1,5 +1,6 @@
 # 🎥 VTube - A Comprehensive Video Streaming Platform
 
+[![Live Link](https://vtube-t8ps.onrender.com/)](https://vtube-t8ps.onrender.com/)
 [![Node.js Version](https://img.shields.io/badge/Node.js-v18+-green.svg)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248.svg)](https://www.mongodb.com/)
 [![React](https://img.shields.io/badge/Frontend-React-61DAFB.svg)](https://reactjs.org/)
