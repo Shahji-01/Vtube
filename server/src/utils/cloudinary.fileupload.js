@@ -60,7 +60,10 @@ const deleteOnCloudinaryImage = async (oldFilePublicId) => {
     if(!oldFilePublicId) return null;
     // delete the file on cloudinary.
     const public_id = oldFilePublicId.split("/").pop().split(".")[0]
-    const response = await cloudinary.uploader.destroy(public_id, { invalidate: true, resource_type: 'raw'});
+    // Images are uploaded with resource_type "auto", which Cloudinary stores as
+    // "image". Deleting them must use resource_type 'image' — 'raw' never
+    // matches an image asset, so the old avatar/cover would silently leak.
+    const response = await cloudinary.uploader.destroy(public_id, { invalidate: true, resource_type: 'image'});
     console.log("File deleted on cloudinary", oldFilePublicId, "public_id", public_id);
     return response;
   } 
@@ -69,5 +72,5 @@ const deleteOnCloudinaryImage = async (oldFilePublicId) => {
   }
 };
 
-// for image resource-type raw
+// for image resource-type image
 export {uploadOnCloudinary, deleteOnCloudinaryVideo, deleteOnCloudinaryImage}

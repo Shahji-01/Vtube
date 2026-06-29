@@ -54,7 +54,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
      .json(new ApiResponse(200, userTweets, "User Tweets fetched"))
  
    } catch (error) {
-     throw new ApiError(500, error, "Could not fetch user tweets at thid moment")
+     throw new ApiError(500, "Could not fetch user tweets at thid moment")
    }
 })//DONE!
 

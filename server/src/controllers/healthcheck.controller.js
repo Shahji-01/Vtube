@@ -16,7 +16,7 @@ const healthCheck = asyncHandler(async (req, res) => {
 
     } catch (error) {
         // If an error occurs, indicate that the service is not operational
-        throw new ApiError(500, error, "Database connection failed on healthCheck");
+        throw new ApiError(500, "Database connection failed on healthCheck");
     }
 });//DONE!
 

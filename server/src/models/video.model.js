@@ -31,6 +31,11 @@
       type:Boolean,
       default:true,
     },
+    isHidden:{
+      type:Boolean,
+      default:false,
+      index:true,
+    },
     owner:{
       type:Schema.Types.ObjectId,
       ref:"User",
@@ -41,4 +46,9 @@
   }
 );
 videoSchema.plugin(mongooseAggregatePaginate);
+
+// Indexes on hot query paths
+videoSchema.index({ owner: 1, createdAt: -1 });
+videoSchema.index({ title: "text", description: "text" });
+
 export const Video = mongoose.model("Video", videoSchema);

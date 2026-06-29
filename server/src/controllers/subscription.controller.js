@@ -31,7 +31,7 @@ const createChannel = asyncHandler(async (req, res) => {
         .status(201)
         .json(new ApiResponse(201, createdUserChannel, "Your Videotube channel has been created successfully : "))
     } catch (error) {
-        throw new ApiError(500, error, "Something went wrong while creating your subscription")
+        throw new ApiError(500, "Something went wrong while creating your subscription")
     }
 })
 
@@ -95,7 +95,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200,subscriberIds,"Channel Subscriber fetched successfully"));
 
     } catch (error) {
-        throw new ApiError(500, error, "Something went wrong while getting subscribers :Please try again later")
+        throw new ApiError(500, "Something went wrong while getting subscribers :Please try again later")
     }
 })//DONE!
 
@@ -120,7 +120,7 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200,channelIds,"Subscribed channels fetched successfully"));
 
     } catch (error) {
-        throw new ApiError(500, error, "Something went wrong while getting subscribers :Please try again later")
+        throw new ApiError(500, "Something went wrong while getting subscribers :Please try again later")
     }
 })//DONE!
 

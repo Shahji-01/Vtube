@@ -1,6 +1,7 @@
 
 // ---------------------API ERROR-------------------------------------------
 
+import logger from "../config/logger.js";
 
 class ApiError extends Error {
     constructor(
@@ -18,7 +19,7 @@ class ApiError extends Error {
       if (stack) {
         this.stack = stack; // If a stack trace is provided, assign it to the stack property
       } else {
-        console.log("Error  from ApiError ")
+        logger.debug("Capturing stack trace from ApiError")
         Error.captureStackTrace(this, this.constructor); // Otherwise, capture the stack trace
       }
     }

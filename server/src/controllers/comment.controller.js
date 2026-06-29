@@ -1,36 +1,38 @@
-import mongoose from "mongoose"
+import mongoose, { isValidObjectId } from "mongoose"
 import {Comment} from "../models/comment.model.js"
 import {Video} from "../models/video.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
 import {triggerNotification} from "../utils/notification.js"
+import {resolveCommentContent} from "../services/commentContent.js"
 
 /*------------GETVIDECOMMENTS----------------*/
 
 const getVideoComments = asyncHandler(async (req, res) => {
     const { video_Id } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, sort = "newest" } = req.query;
 
     if (!isValidObjectId(video_Id)) {
         throw new ApiError(400, "Invalid video ID");
     }
 
+    // Pinned comments always come first (R3.6); the secondary order depends on
+    // the requested sort: `top` ranks by likes then recency (R3.7), while
+    // `newest` (or an absent/unknown value) preserves the existing recency
+    // ordering (R3.8). `likesCount` is computed below, so this $sort must run
+    // AFTER the $addFields that produces it.
+    const sortStage = sort === "top"
+        ? { pinned: -1, likesCount: -1, createdAt: -1 }
+        : { pinned: -1, createdAt: -1 };
+
     const commentsAggregation = await Comment.aggregate([
         {
             $match: {
                 video: new mongoose.Types.ObjectId(video_Id),
-                parentComment: null
+                parentComment: null,
+                isHidden: { $ne: true }
             }
-        },
-        {
-            $sort: { createdAt: -1 }
-        },
-        {
-            $skip: (parseInt(page) - 1) * parseInt(limit)
-        },
-        {
-            $limit: parseInt(limit)
         },
         {
             $lookup: {
@@ -118,6 +120,15 @@ const getVideoComments = asyncHandler(async (req, res) => {
             $project: {
                 likes: 0
             }
+        },
+        {
+            $sort: sortStage
+        },
+        {
+            $skip: (parseInt(page) - 1) * parseInt(limit)
+        },
+        {
+            $limit: parseInt(limit)
         }
     ]);
 
@@ -171,7 +182,7 @@ const addComment = asyncHandler(async (req, res) => {
             .json(new ApiResponse(200, newComment, "Comment added successfully"));
     } catch (error) {
         // If an error occurs during the process, throw an error
-        throw new ApiError(500, error, "Some error occurred while adding comment");
+        throw new ApiError(500, "Some error occurred while adding comment");
     }
 });//DONE!
 
@@ -182,18 +193,18 @@ const updateComment = asyncHandler(async (req, res) => {
     // TODO: update a comment
     const {comment_Id} = req.params;
 
-    const {newComment} = req.body;
+    // Unify the comment content field: prefer `commentContent`, fall back to the
+    // legacy `newComment`, trimming whitespace (Req 5.1, 5.2, 5.4).
+    const content = resolveCommentContent(req.body);
 
-    // console.log(newComment, comment_Id, "Comment and video_Id ");
-
-    if (!(comment_Id || newComment)) {
-        throw new ApiError(404, "Invalid comment_Id : can not update empty");
+    if (!content) {
+        throw new ApiError(400, "commentContent must not be empty");
     }
 
     try {
         const updatedComment = await Comment.findByIdAndUpdate(comment_Id,
             {
-                content: newComment
+                content
             },
             {
                 new: true,
@@ -207,7 +218,7 @@ const updateComment = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, updatedComment, "Comment updated successfully"))
 
     } catch (error) {
-        throw new ApiError(500, error, "Some error occurred while updating comment");
+        throw new ApiError(500, "Some error occurred while updating comment");
     }
 }) //DONE!
 
@@ -369,10 +380,78 @@ const getCommentReplies = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, repliesAggregation, "Replies fetched successfully"));
 });
 
+/*--------------PINCOMMENT--------------------*/
+
+const pinComment = asyncHandler(async (req, res) => {
+    const { comment_Id } = req.params;
+
+    // The `verifyVideoOwnerOfComment` guard has already validated ownership and
+    // stashed the loaded comment on `req.resource`. Fall back to a fresh load
+    // if it is missing for any reason.
+    const comment = req.resource || await Comment.findById(comment_Id);
+
+    if (!comment) {
+        throw new ApiError(404, "Comment not found");
+    }
+
+    // Pinning an already-pinned comment is an idempotent no-op success and must
+    // not count against the pin limit (R3.2).
+    if (comment.pinned) {
+        return res
+            .status(200)
+            .json(new ApiResponse(200, comment, "Comment pinned"));
+    }
+
+    // Enforce Pin_Limit = 1 per video: if a pinned comment already exists,
+    // pinning another → 409 (R3.4).
+    const pinnedCount = await Comment.countDocuments({ video: comment.video, pinned: true });
+
+    if (pinnedCount >= 1) {
+        throw new ApiError(409, "Pin limit reached: unpin the current pinned comment first");
+    }
+
+    const updated = await Comment.findByIdAndUpdate(
+        comment._id,
+        { pinned: true, pinnedAt: new Date() },
+        { new: true, validateBeforeSave: false }
+    );
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, updated, "Comment pinned"));
+});//DONE!
+
+
+/*--------------UNPINCOMMENT--------------------*/
+
+const unpinComment = asyncHandler(async (req, res) => {
+    const { comment_Id } = req.params;
+
+    const comment = req.resource || await Comment.findById(comment_Id);
+
+    if (!comment) {
+        throw new ApiError(404, "Comment not found");
+    }
+
+    // Unpinning is idempotent: clear the pin state regardless of current value (R3.5).
+    const updated = await Comment.findByIdAndUpdate(
+        comment._id,
+        { pinned: false, pinnedAt: null },
+        { new: true, validateBeforeSave: false }
+    );
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, updated, "Comment unpinned"));
+});//DONE!
+
+
 export {
     getVideoComments, 
     addComment, 
     updateComment,
     deleteComment,
-    getCommentReplies
+    getCommentReplies,
+    pinComment,
+    unpinComment
 }

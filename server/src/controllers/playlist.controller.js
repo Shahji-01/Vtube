@@ -34,7 +34,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
         .status(201)
         .json(new ApiResponse(201, newPlaylist, "Playlist created successfully"))
     } catch (error) {
-        throw new ApiError(500, error, "An error while creating playlist : try again later")
+        throw new ApiError(500, "An error while creating playlist : try again later")
     }
 
 })//DONE!
@@ -86,7 +86,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, playlist, "Playlist has been fetched successfully"))
 
     } catch (error) {
-        throw new ApiError(500, error, "An error while getting playlist by id : try again later")
+        throw new ApiError(500, "An error while getting playlist by id : try again later")
     }
 })//Done!
 
@@ -137,7 +137,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, videoAddedPlaylist, "video added to playlist successfully"))
     } catch (error) {
-        throw new ApiError(500, error, "An error occured while adding video in playlist: please try again later")
+        throw new ApiError(500, "An error occured while adding video in playlist: please try again later")
     }
 })//DONE!
 
@@ -179,7 +179,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, playlistWithoutVideo, "Video is removed from playlist"))
     } catch (error) {
-        throw new ApiError(500, error, "An error occured while removing video from playlist")
+        throw new ApiError(500, "An error occured while removing video from playlist")
     }
 
 })//DONE!
@@ -207,7 +207,7 @@ const deletePlaylist = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, deletedPlaylist, "Playlist deleted successfully"))
 
     } catch (error) {
-        throw new ApiError(500, error, "An error occurred while deleting playlist")
+        throw new ApiError(500, "An error occurred while deleting playlist")
     }
 })//DONE!
 

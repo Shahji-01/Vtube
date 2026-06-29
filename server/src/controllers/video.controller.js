@@ -8,6 +8,8 @@ import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
 import {uploadOnCloudinary, deleteOnCloudinaryVideo, deleteOnCloudinaryImage} from "../utils/cloudinary.fileupload.js"
+import {resolveViews} from "../services/viewCount.js"
+import logger from "../config/logger.js"
  import axios from "axios";  // Importing the request module for HTTP requests
 //  TODO: While deleting I am not deleting video/files from the cloudinary
 /*--------------------GET ALL VIDEOS---------------- */
@@ -20,42 +22,99 @@ const getAllVideos = asyncHandler(async (req, res) => {
     const pageLimit = parseInt(limit)
     const skip = (pageNumber - 1) * pageLimit
 
+    // Optional discovery filters (Phase 4, R2.4/R2.5).
+    const { uploadDateFrom, uploadDateTo, durationBucket } = req.query
+
     try {
       // Build the $match filter:
+      // - Always exclude unpublished and moderator-hidden videos (R2.8, R2.9, R4.9).
       // - If `userId` query param is provided (e.g. Channel page), filter by that owner.
-      // - If `query` is provided (search), do a text search across all published videos.
-      // - Otherwise, return all published videos (Home feed).
-      const matchFilter = { isPublished: true }
+      // - Optional upload-date range and duration-bucket filters narrow the band.
+      // - Search uses ONE strategy per request: relevance ($text) or legacy ($regex);
+      //   the two are NEVER combined in a single query.
+      const matchFilter = { isPublished: true, isHidden: { $ne: true } }
 
       if (userId && mongoose.isValidObjectId(userId)) {
         matchFilter.owner = new mongoose.Types.ObjectId(userId)
       }
 
-      if (query) {
-        matchFilter.$or = [
-          { title:       { $regex: query, $options: 'i' } },
-          { description: { $regex: query, $options: 'i' } },
-        ]
+      // Upload-date range → createdAt bounds (only set the bound(s) present).
+      if (uploadDateFrom || uploadDateTo) {
+        matchFilter.createdAt = {}
+        if (uploadDateFrom) matchFilter.createdAt.$gte = new Date(uploadDateFrom)
+        if (uploadDateTo) matchFilter.createdAt.$lte = new Date(uploadDateTo)
       }
 
-      const pipeline = [
-        { $match: matchFilter },
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'owner',
-            foreignField: '_id',
-            as: 'owner',
-            pipeline: [
-              { $project: { username: 1, fullName: 1, avatar: 1 } }
-            ]
-          }
-        },
-        { $addFields: { owner: { $first: '$owner' } } },
-        { $sort: { [sortBy]: sortType === 'desc' ? -1 : 1 } },
-        { $skip: skip },
-        { $limit: pageLimit }
-      ]
+      // Duration bucket → duration band (seconds).
+      if (durationBucket === 'short') {
+        matchFilter.duration = { $lt: 240 }
+      } else if (durationBucket === 'medium') {
+        matchFilter.duration = { $gte: 240, $lte: 1200 }
+      } else if (durationBucket === 'long') {
+        matchFilter.duration = { $gt: 1200 }
+      }
+
+      // Choose ONE query strategy per request.
+      const isRelevance = !!query && (sortBy === undefined || sortBy === 'relevance')
+
+      let pipeline
+      if (isRelevance) {
+        // RELEVANCE branch: rank by MongoDB text score (R2.2, R2.6).
+        matchFilter.$text = { $search: query }
+        pipeline = [
+          { $match: matchFilter },
+          { $addFields: { score: { $meta: 'textScore' } } },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'owner',
+              foreignField: '_id',
+              as: 'owner',
+              pipeline: [
+                { $project: { username: 1, fullName: 1, avatar: 1 } }
+              ]
+            }
+          },
+          { $addFields: { owner: { $first: '$owner' } } },
+          { $sort: { score: { $meta: 'textScore' } } },
+          { $skip: skip },
+          { $limit: pageLimit }
+        ]
+      } else {
+        // LEGACY/REGEX branch: preserves today's behavior.
+        if (query) {
+          matchFilter.$or = [
+            { title:       { $regex: query, $options: 'i' } },
+            { description: { $regex: query, $options: 'i' } },
+          ]
+        }
+
+        const sortField = sortBy === 'date'
+          ? 'createdAt'
+          : sortBy === 'views'
+            ? 'views'
+            : (sortBy || 'createdAt')
+        const sortDir = sortType === 'asc' ? 1 : -1
+
+        pipeline = [
+          { $match: matchFilter },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'owner',
+              foreignField: '_id',
+              as: 'owner',
+              pipeline: [
+                { $project: { username: 1, fullName: 1, avatar: 1 } }
+              ]
+            }
+          },
+          { $addFields: { owner: { $first: '$owner' } } },
+          { $sort: { [sortField]: sortDir } },
+          { $skip: skip },
+          { $limit: pageLimit }
+        ]
+      }
 
       const [videos, countResult] = await Promise.all([
         Video.aggregate(pipeline),
@@ -65,10 +124,44 @@ const getAllVideos = asyncHandler(async (req, res) => {
       const totalCount = countResult
       const hasNextPage = pageNumber * pageLimit < totalCount
 
-      res.status(200).json(new ApiResponse(200, { docs: videos, page: pageNumber, limit: pageLimit, totalCount, hasNextPage }, 'Videos fetched successfully'))
+      // Read-time max() shim (Req 4.3, 4.4, 4.5): expose the bounded canonical
+      // `views` even for legacy docs still carrying a `view` field.
+      const docs = videos.map(v => ({ ...v, views: resolveViews(v) }))
+
+      res.status(200).json(new ApiResponse(200, { docs, page: pageNumber, limit: pageLimit, totalCount, hasNextPage }, 'Videos fetched successfully'))
     } catch (error) {
       throw new ApiError(500, 'Failed to load videos')
     }
+})
+
+
+/*--------------------SEARCH SUGGESTIONS (autocomplete)---------------- */
+// Returns up to 10 distinct titles of published, non-hidden videos matching
+// the prefix/text query `q`, ranked by text score (R2.8, R2.9).
+const searchSuggestions = asyncHandler(async (req, res) => {
+    const { q } = req.query
+
+    const matches = await Video.find(
+        { isPublished: true, isHidden: { $ne: true }, $text: { $search: q } },
+        { score: { $meta: 'textScore' }, title: 1 }
+    )
+        .sort({ score: { $meta: 'textScore' } })
+        .limit(10)
+
+    // Project distinct title strings (dedupe), preserving rank order, cap at 10.
+    const seen = new Set()
+    const suggestions = []
+    for (const doc of matches) {
+        if (doc?.title && !seen.has(doc.title)) {
+            seen.add(doc.title)
+            suggestions.push(doc.title)
+            if (suggestions.length >= 10) break
+        }
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, { suggestions }, 'Suggestions fetched successfully'))
 })
 
 
@@ -126,7 +219,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     .status(201)
     .json(new ApiResponse(200, createdVideo, "Video uploaded successfully uploaded"))
       }catch (error) {
-        throw new ApiError(500,error, "Some error occurred while publishing video")
+        throw new ApiError(500, "Some error occurred while publishing video")
     }
 }) //DONE when use postman always upload files again again else undefined error come
 
@@ -256,6 +349,10 @@ const getVideoById = asyncHandler(async (req, res) => {
 
     const video = videoAggregation[0];
 
+    // Read-time max() shim (Req 4.3, 4.4, 4.5): expose the bounded canonical
+    // `views`, deriving from a legacy `view` field when present.
+    video.views = resolveViews(video);
+
     // Visibility Check
     if (!video.isPublished && video.owner?._id?.toString() !== req.user?._id?.toString()) {
         throw new ApiError(403, "Video is private");
@@ -375,8 +472,8 @@ const deleteVideo = asyncHandler(async (req, res) => {
         }
 
         // 3. Delete from Cloudinary (Soft fail check)
-        deleteOnCloudinaryVideo(video.videoFile).catch(err => console.error("Cloudinary video delete failed:", err));
-        cloudinary.uploader.destroy(thumbnailName, { invalidate: true }).catch(err => console.error("Cloudinary thumbnail delete failed:", err));
+        deleteOnCloudinaryVideo(video.videoFile).catch(err => logger.error({ err }, "Cloudinary video delete failed"));
+        cloudinary.uploader.destroy(thumbnailName, { invalidate: true }).catch(err => logger.error({ err }, "Cloudinary thumbnail delete failed"));
 
         return res
         .status(200)
@@ -450,7 +547,8 @@ export {
     updateVideo,
     deleteVideo,
     togglePublishStatus,
-    streamVideo
+    streamVideo,
+    searchSuggestions
 }
 
 

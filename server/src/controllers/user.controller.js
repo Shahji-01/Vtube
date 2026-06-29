@@ -5,8 +5,17 @@
  import { User } from "../models/user.model.js";
  import { uploadOnCloudinary , deleteOnCloudinaryImage} from "../utils/cloudinary.fileupload.js";
  import { ApiResponse } from "../utils/ApiResponse.js";
+ import logger from "../config/logger.js";
  import  Jwt  from "jsonwebtoken";
 import mongoose , { isValidObjectId } from "mongoose";
+import { rotateRefreshToken } from "../services/tokenService.js";
+import { cookieOptions } from "../config/cookies.js";
+import {
+  keyForAccount,
+  isAccountLocked,
+  onLoginFailure,
+  onLoginSuccess,
+} from "../middlewares/accountLockout.middleware.js";
 
 /*----CREATING METHOD FRO ACCESS AND REFRESH TOKEN----*/
 
@@ -167,7 +176,34 @@ import mongoose , { isValidObjectId } from "mongoose";
     $or:[{username}, {email}] // means find a user with either email or username
   })
 
+  /*------ Per-account brute-force lockout (Req 7) ------
+   * Derive a stable lockout key from the submitted credentials BEFORE any
+   * password verification. For an existing account the key is derived from its
+   * _id; for a non-existent account it is a deterministic hash of the submitted
+   * identifier, so the two cases are indistinguishable (Req 7.8). The IP-based
+   * authLimiter is untouched and continues to apply on top of this (Req 7.6).
+   */
+  const lockoutKey = keyForAccount(user || email || username);
+
+  // Check the lock BEFORE verifying the password. If the store is unavailable,
+  // fail closed: reject with 429 without checking the password (Req 7.9).
+  let accountLocked;
+  try {
+    accountLocked = isAccountLocked(lockoutKey);
+  } catch (storeError) {
+    throw new ApiError(429, "Too many login attempts. Please try again later.");
+  }
+
+  // While locked, reject with a generic 429 that reveals neither password
+  // correctness nor account existence (Req 7.4, 7.7).
+  if (accountLocked) {
+    throw new ApiError(429, "Too many login attempts. Please try again later.");
+  }
+
   if (!user) {
+    // Count attempts against non-existent accounts too, so their lockout
+    // behaviour stays indistinguishable from existing accounts (Req 7.8).
+    try { onLoginFailure(lockoutKey); } catch (storeError) { /* non-fatal */ }
     throw new ApiError(404, "User does not exist : Can't login");
   }
 
@@ -181,8 +217,13 @@ import mongoose , { isValidObjectId } from "mongoose";
 
   const isPasswordValid =  await user.isPasswordCorrect(password);
   if (!isPasswordValid) {
+    // Wrong password: increment the per-account failure counter (Req 7.1).
+    try { onLoginFailure(lockoutKey); } catch (storeError) { /* non-fatal */ }
     throw new ApiError(404, "Password does not match with your old password : Try again");
   }
+
+  // Successful authentication: reset the failure counter (Req 7.2).
+  try { onLoginSuccess(lockoutKey); } catch (storeError) { /* non-fatal */ }
 
   /*------------------Step 5 access and refresh token to the user----------------------*/ 
     const {accessToken, refreshToken} = await createAccessAndRefreshToken(user._id);
@@ -193,12 +234,9 @@ import mongoose , { isValidObjectId } from "mongoose";
     select("-password -refreshToken");
 
     //  -- above {user} nd {loggedInUser} are different becuase above user will have empty refreshToken field {see user model} bcz we haven't specified refreshtoken earlier
-    console.log(user, loggedInUser, "user ,  loggedInUser see diffrence"); 
+    logger.debug({ userId: loggedInUser?._id }, "User logged in"); 
      
-     const options= {  // since by default cookies can be mmodified by anyone from frint-end or server so by doing this sookies can only be modified from server side
-      httpOnly: true,
-      secure:true,
-     }
+     const options = cookieOptions();
     
 /*------------------STEP-6 RETURN RESPONSE-------------*/
 
@@ -239,10 +277,7 @@ import mongoose , { isValidObjectId } from "mongoose";
             }
           ) 
           //  -clear cookies
-          const options = {
-            httpOnly: true,
-            secure: true,
-          }
+          const options = cookieOptions();
           //  console.log(req.user, "LOG OUT")
           return res
           .status(200)
@@ -258,58 +293,76 @@ import mongoose , { isValidObjectId } from "mongoose";
 
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
-    console.log(incomingRefreshToken, "incomingAccessToken in refreshAccessTooken");
-
+    // Absent token => reject, no rotation (Req 8.4)
     if (!incomingRefreshToken) {
-      throw new ApiError(401,"Unathorized Access");
+      throw new ApiError(401, "Unauthorized Access");
     }
-                      // verify incoming refresh  token with one we have and other stored at database
+
+    /*------ Phase 1: verify + match ------
+     * Any verification failure (expired/invalid/mismatched/post-logout) is
+     * rejected with HTTP 401 and performs NO rotation (Req 8.2, 8.3, 8.5, 8.8).
+     */
+    let user;
     try {
-       const decodedToken = Jwt.verify(
-        incomingRefreshToken, 
-       process.env.REFRESH_TOKEN_SECRET
-       )
-  
-       console.log(decodedToken, "decodedToken in refreshAccessTooken");
-  
-      const user = await User.findById(decodedToken?._id) 
-       //we have genearetd refreshtoken with only _id
-      console.log(user, "user in refreshAccessTooken");
-  
+      const decodedToken = Jwt.verify(
+        incomingRefreshToken,
+        process.env.REFRESH_TOKEN_SECRET
+      );
+
+      // The refresh token only carries the user _id.
+      user = await User.findById(decodedToken?._id);
+
       if (!user) {
-      throw new ApiError(401,"Invalid refreshToken");
+        throw new ApiError(401, "Invalid refreshToken");
       }
-  
-      if (incomingRefreshToken !== user?.refreshToken) {   // ja aa raha wo user ke pass hona bhi chahiye i.e the incomingrefreshtoken must be same as the on which user have at database
-         throw new ApiError(401,"Refresh token is expired or used"); 
+
+      // The incoming token must equal the token currently stored on the user.
+      // After logout the stored token is unset, so a pre-logout token fails here.
+      if (incomingRefreshToken !== user?.refreshToken) {
+        throw new ApiError(401, "Refresh token is expired or used");
       }
-  
-       const options = {
-        httpOnly: true,
-        secure: true,
-       }
-  
-     const {accessToken, newRefreshToken} =  await createAccessAndRefreshToken(user._id)
-  
-      return res
+    } catch (error) {
+      // Preserve explicit ApiError status; map jwt verify failures to 401.
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(401, error?.message || "Invalid refresh token");
+    }
+
+    const options = cookieOptions();
+
+    /*------ Phase 2: rotate + persist ------
+     * Rotate the refresh token and persist the new value. If persistence fails,
+     * return a server error: the prior token stays valid and the cookie is left
+     * unchanged because we never reach res.cookie(...) below (Req 8.6).
+     */
+    let accessToken;
+    let refreshToken;
+    try {
+      ({ accessToken, refreshToken } = await rotateRefreshToken(User, user._id));
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(500, "Failed to rotate refresh token");
+    }
+
+    // Success: rotate succeeded, set both cookies to the new values (Req 8.1).
+    return res
       .status(200)
       .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", newRefreshToken, options)
+      .cookie("refreshToken", refreshToken, options)
       .json(
         new ApiResponse(
           200,
           {
             user,
             accessToken,
-            refreshToken:newRefreshToken,
+            refreshToken,
           },
           "Access token refreshed successfully"
         )
-      )
-    } catch (error) {
-      throw new ApiError(401, error?.message||"Invalid newrefresh token")
-    }
-    
+      );
   })
    
 
@@ -322,7 +375,7 @@ import mongoose , { isValidObjectId } from "mongoose";
     if (!(newPassword === confirmPassword)) {
       throw new ApiError(400, "newPassword does match confirm password")
     }
-    console.log(oldPassword, newPassword, "oldPassword and newPassword in changeCurrentPassword");
+    logger.debug("changeCurrentPassword invoked");
     if (!oldPassword || !newPassword) {
       throw new ApiError(400, "oldPassword and newPassword are requried");
     }
@@ -359,7 +412,7 @@ import mongoose , { isValidObjectId } from "mongoose";
   // ---------------UPDATE USER DETAILS ----------------
    const updateUserDetails = asyncHandler(async (req, res) => {
        const {fullName, email} = req.body;
-       console.log(fullName, email);
+       logger.debug({ fullName, email }, "updateUserDetails invoked");
 
        if (!(fullName || email)) {
         throw new ApiError(401, "All fields are required")
@@ -460,7 +513,7 @@ import mongoose , { isValidObjectId } from "mongoose";
          },
          {new:true}      
        ).select("-password")
-   console.log(user, "2")
+   logger.debug({ userId: user?._id }, "Cover image updated")
      return res 
       .status(200)
       .json( new ApiResponse(200, user, "coverImage updated" ))
