@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken"; // it is Bearer token for the client side authentication endpoint and   will  one who has token can access data thatis it is like key for user
 const userSchema = new Schema(
   {
