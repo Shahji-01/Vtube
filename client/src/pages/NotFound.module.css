@@ -1,0 +1,50 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NOT FOUND (404) PAGE — token-driven, no inline presentational styles.
+   ─────────────────────────────────────────────────────────────────────
+   Replaces the previous inline-styled markup with scoped module classes
+   that reference design tokens only (color + spacing). The oversized 404
+   numeral uses a brand gradient clipped to the text.
+═══════════════════════════════════════════════════════════════════════ */
+
+.container {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-10);
+  text-align: center;
+}
+
+/* Oversized hero numeral. The display size is intentionally larger than the
+   type scale (decorative), so it uses a literal size; all color comes from
+   brand tokens via a clipped gradient. */
+.code {
+  font-family: var(--font-display);
+  font-size: 120px;
+  font-weight: var(--fw-black);
+  line-height: 1;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-muted) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: var(--sp-4);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  line-height: var(--lh-2xl);
+  font-weight: var(--fw-black);
+  color: var(--text-primary);
+  margin-bottom: var(--sp-2);
+}
+
+.message {
+  max-width: 360px;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  color: var(--text-muted);
+  margin-bottom: var(--sp-8);
+}

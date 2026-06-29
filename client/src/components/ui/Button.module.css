@@ -1,0 +1,153 @@
+/* Button primitive — token-based, no raw color literals, no inline styles. */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-weight: var(--fw-semibold);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease);
+}
+
+.label {
+  display: inline-block;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+/* ── Visible focus ring (accessibility) ─────────────────────────────── */
+.button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ── Sizes ──────────────────────────────────────────────────────────── */
+.size-sm {
+  height: 32px;
+  padding: 0 var(--sp-3);
+  font-size: var(--fs-sm);
+}
+
+.size-md {
+  height: 40px;
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-base);
+}
+
+.size-lg {
+  height: 48px;
+  padding: 0 var(--sp-6);
+  font-size: var(--fs-md);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* ── Variant: primary ───────────────────────────────────────────────── */
+.primary {
+  background-color: var(--brand);
+  color: var(--text-on-brand);
+  border-color: var(--brand);
+}
+
+.primary:hover:not(:disabled):not([aria-disabled='true']) {
+  background-color: var(--brand-hover);
+  border-color: var(--brand-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow-sm);
+}
+
+/* ── Variant: secondary ─────────────────────────────────────────────── */
+.secondary {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.secondary:hover:not(:disabled):not([aria-disabled='true']) {
+  background-color: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+/* ── Variant: ghost ─────────────────────────────────────────────────── */
+.ghost {
+  background-color: transparent;
+  color: var(--text-primary);
+  border-color: transparent;
+}
+
+.ghost:hover:not(:disabled):not([aria-disabled='true']) {
+  background-color: var(--bg-hover);
+}
+
+/* ── Variant: danger ────────────────────────────────────────────────── */
+.danger {
+  background-color: var(--danger);
+  color: var(--text-on-brand);
+  border-color: var(--danger);
+}
+
+.danger:hover:not(:disabled):not([aria-disabled='true']) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+/* ── Variant: subscribe ─────────────────────────────────────────────── */
+.subscribe {
+  background-color: var(--brand);
+  color: var(--text-on-brand);
+  border-color: var(--brand);
+}
+
+.subscribe:hover:not(:disabled):not([aria-disabled='true']) {
+  background-color: var(--brand-hover);
+  border-color: var(--brand-hover);
+}
+
+/* Subscribed / toggled state: muted, outlined look. */
+.subscribe.active {
+  background-color: var(--bg-elevated);
+  color: var(--text-secondary);
+  border-color: var(--border);
+}
+
+.subscribe.active:hover:not(:disabled):not([aria-disabled='true']) {
+  background-color: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+/* ── Disabled & loading ─────────────────────────────────────────────── */
+.button:disabled,
+.button[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+
+.loading {
+  cursor: progress;
+}
+
+.spinner {
+  display: inline-flex;
+}

@@ -1,0 +1,74 @@
+# Render blueprint for the VTube backend (API + Socket.IO).
+# Deploy: Render Dashboard → New → Blueprint → pick this repo.
+#
+# This runs the server as an API-only service (the React client is hosted
+# separately on Vercel). Secrets are marked `sync: false` so Render prompts for
+# them on first deploy instead of storing them in the repo.
+services:
+  - type: web
+    name: vtube-api
+    runtime: node
+    rootDir: server
+    plan: free
+    region: oregon
+    # Skip the postinstall client build (the client is built/hosted on Vercel).
+    buildCommand: npm install --ignore-scripts
+    startCommand: npm start
+    healthCheckPath: /api/v1/healthcheck
+    envVars:
+      # ── Runtime ──────────────────────────────────────────────
+      - key: NODE_ENV
+        value: production
+      # Render injects PORT automatically; the server reads process.env.PORT.
+
+      # ── CORS / cookies (cross-site: Vercel frontend → Render API) ──
+      # Set COR_ORIGIN to your exact Vercel URL, e.g. https://vtube.vercel.app
+      - key: COR_ORIGIN
+        sync: false
+      # Cross-site auth cookie requires SameSite=None (with Secure, which is on
+      # automatically because NODE_ENV=production → HTTPS).
+      - key: COOKIE_SAMESITE
+        value: none
+
+      # ── Database ─────────────────────────────────────────────
+      - key: MONGODB_URL
+        sync: false
+      # Optional: only needed if Render's resolver can't do the Atlas SRV lookup.
+      - key: DNS_SERVERS
+        sync: false
+
+      # ── JWT secrets ──────────────────────────────────────────
+      - key: ACCESS_TOKEN_SECRET
+        generateValue: true
+      - key: ACCESS_TOKEN_EXPIRY
+        value: 1d
+      - key: REFRESH_TOKEN_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_EXPIRY
+        value: 10d
+
+      # ── Cloudinary (media storage) ───────────────────────────
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      # ── Optional integrations (leave blank to disable) ───────
+      - key: SENTRY_DSN
+        sync: false
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        sync: false
+      - key: EMAIL_AUTH_USER
+        sync: false
+      - key: EMAIL_AUTH_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

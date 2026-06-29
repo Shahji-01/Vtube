@@ -1,6 +1,11 @@
 import axios from 'axios'
 
-const API_BASE = '/api/v1'
+// Base URL for the API.
+// - Split deploy (Vercel + Render): set VITE_API_URL to the backend's public
+//   API URL, e.g. https://vtube-api.onrender.com/api/v1
+// - Same-origin deploy (backend serves the SPA) or local dev via Vite proxy:
+//   falls back to the relative "/api/v1".
+const API_BASE = import.meta.env.VITE_API_URL || '/api/v1'
 
 const api = axios.create({
   baseURL: API_BASE,

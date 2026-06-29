@@ -4,6 +4,13 @@ import api from '../api/axios'
 import Avatar from './Avatar'
 import Spinner from './Spinner'
 import { formatDistanceToNow } from 'date-fns'
+import { useAuth } from '../context/AuthContext'
+import {
+  connectNotificationSocket,
+  getSocket,
+  onNotification,
+  onUnreadCount,
+} from '../api/socket'
 
 const BellIcon = () => (
   <svg viewBox="0 0 24 24" style={{ width: 20, height: 20, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -24,9 +31,17 @@ const SubIcon = () => (
 export default function NotificationsDropdown() {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loading] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const dropRef = useRef(null)
+  // Mirror of the committed notifications list, used for socket-push dedupe
+  // decisions without putting side effects inside a state updater.
+  const notificationsRef = useRef([])
+  const { user } = useAuth()
+
+  useEffect(() => {
+    notificationsRef.current = notifications
+  }, [notifications])
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -41,10 +56,40 @@ export default function NotificationsDropdown() {
     }
 
     fetchNotifications()
-    // Poll every 60s for new ones in enterprise mode
+    // Poll every 60s for new ones in enterprise mode (Realtime_Fallback)
     const interval = setInterval(fetchNotifications, 60000)
     return () => clearInterval(interval)
   }, [])
+
+  // Realtime updates: subscribe to socket pushes when authenticated.
+  // Falls back silently to the REST fetch/poll above when no socket is available.
+  useEffect(() => {
+    if (!user) return
+
+    // Ensure a socket connection exists (rely on app-boot connection if present).
+    if (!getSocket()) connectNotificationSocket()
+
+    // onNotification/onUnreadCount no-op (return () => {}) when no socket is live,
+    // so this stays safe even if the connection failed.
+    const offNotification = onNotification((payload) => {
+      if (!payload) return
+      // Dedupe by _id: a pushed item could also arrive via the REST refetch/poll.
+      if (payload._id && notificationsRef.current.some(n => n._id === payload._id)) return
+      setNotifications(prev =>
+        (payload._id && prev.some(n => n._id === payload._id)) ? prev : [payload, ...prev]
+      )
+      if (!payload.isRead) setUnreadCount(c => c + 1)
+    })
+
+    const offUnreadCount = onUnreadCount(({ unreadCount } = {}) => {
+      if (typeof unreadCount === 'number') setUnreadCount(unreadCount)
+    })
+
+    return () => {
+      offNotification()
+      offUnreadCount()
+    }
+  }, [user])
 
   useEffect(() => {
     const handler = (e) => {

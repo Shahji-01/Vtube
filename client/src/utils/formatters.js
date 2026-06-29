@@ -57,3 +57,45 @@ export function secureVideoUrl(url) {
   }
   return secure
 }
+
+// ── Image_Context → target rendered width (CSS px) ──
+export const IMAGE_WIDTHS = { 'grid-card': 360, 'list-thumb': 240, 'avatar': 88 }
+
+const CLOUDINARY_HOST = 'res.cloudinary.com'
+
+// ── imageUrl: responsive Cloudinary URL builder (built on secureUrl) ──
+//  - falsy / whitespace-only url            → ''
+//  - non-Cloudinary host                    → secureUrl(url)  (passthrough)
+//  - Cloudinary url + unknown context       → secureUrl(url)  (no width)
+//  - Cloudinary url + known context         → secureUrl(url) with
+//    `w_<width>,q_auto,f_auto/` inserted immediately after `/upload/`
+export function imageUrl(url, context) {
+  // 1. falsy or whitespace-only → ''
+  if (!url || typeof url !== 'string' || url.trim() === '') return ''
+
+  // 2. always build on secureUrl so the result is https (or '')
+  const secure = secureUrl(url)
+
+  // 3. host must be Cloudinary, otherwise passthrough
+  let host
+  try {
+    host = new URL(secure).host
+  } catch {
+    return secure
+  }
+  if (host !== CLOUDINARY_HOST) return secure
+
+  // 4. unknown context → no width transform. Guard with hasOwn so inherited
+  //    Object.prototype names (e.g. 'valueOf', 'toString') are NOT treated as
+  //    known contexts (R2.6).
+  if (!Object.prototype.hasOwnProperty.call(IMAGE_WIDTHS, context)) return secure
+  const width = IMAGE_WIDTHS[context]
+
+  // 5. insert transform segment immediately after `/upload/`
+  const marker = '/upload/'
+  const idx = secure.indexOf(marker)
+  if (idx === -1) return secure
+  const insertAt = idx + marker.length
+  const transform = `w_${width},q_auto,f_auto/`
+  return secure.slice(0, insertAt) + transform + secure.slice(insertAt)
+}

@@ -1,0 +1,20 @@
+/* Spinner primitive — token-based, no raw color literals. */
+
+.spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+/* The visible rotating ring. Diameter / border-width come from inline
+   (runtime-computed) styles; color, motion and shape come from tokens. */
+.ring {
+  display: inline-block;
+  box-sizing: border-box;
+  border-style: solid;
+  border-color: var(--border-hover);
+  border-top-color: var(--brand);
+  border-radius: var(--radius-full);
+  animation: spin var(--t-slow) linear infinite;
+}

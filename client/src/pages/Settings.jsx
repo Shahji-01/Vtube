@@ -1,27 +1,30 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import api from '../api/axios'
-import Avatar from '../components/Avatar'
-import Spinner from '../components/Spinner'
+import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Spinner from '../components/ui/Spinner'
+import Avatar from '../components/ui/Avatar'
+import styles from './Settings.module.css'
 
 const CameraIcon = () => (
-  <svg viewBox="0 0 24 24" style={{ width: 24, height: 24, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}>
-    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-    <circle cx="12" cy="13" r="4"/>
+  <svg className={styles.icon} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+    <circle cx="12" cy="13" r="4" />
   </svg>
 )
 
 export default function Settings() {
   const { user, setUser } = useAuth()
   const toast = useToast()
-  
+
   const [profileForm, setProfileForm] = useState({ fullName: user?.fullName || '', email: user?.email || '' })
   const [passForm, setPassForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' })
-  
+
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [loadingPass, setLoadingPass]       = useState(false)
-  
+
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [coverUploading, setCoverUploading]   = useState(false)
 
@@ -82,57 +85,48 @@ export default function Settings() {
 
   return (
     <>
-      <div className="page-header">
-        <h1 className="page-title">Settings</h1>
-        <p className="page-sub">Manage your channel identity and account settings</p>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Settings</h1>
+        <p className={styles.subtitle}>Manage your channel identity and account settings</p>
       </div>
 
-      <div style={{ maxWidth: 800, margin: '20px 0', display: 'flex', flexDirection: 'column', gap: 32 }}>
-        
+      <div className={styles.sections}>
+
         {/* Visual Identity Section */}
-        <section className="setting-section">
-          <h2>Channel Appearance</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, padding: '24px 0' }}>
-            
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Channel Appearance</h2>
+          <div className={styles.appearanceBody}>
+
             {/* Cover Upload */}
             <div>
-              <p style={{ fontWeight: 500, marginBottom: 12 }}>Cover Banner</p>
-              <div 
-                className="channel-cover" 
-                style={{ position: 'relative', cursor: 'pointer', overflow: 'hidden', height: 180 }}
-              >
-                {user?.coverImage ? <img src={user.coverImage} alt="Cover" /> : <div className="channel-cover-placeholder" />}
-                
-                <label style={{ 
-                  position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
-                  background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', color: 'white', opacity: coverUploading ? 1 : 0.8
-                }}>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    style={{ display: 'none' }} 
+              <p className={styles.fieldLabel}>Cover Banner</p>
+              <div className={styles.cover}>
+                {user?.coverImage
+                  ? <img className={styles.coverImg} src={user.coverImage} alt="Cover" />
+                  : <div className={styles.coverPlaceholder} />}
+
+                <label className={`${styles.overlay} ${styles.coverOverlay} ${coverUploading ? styles.overlayActive : ''}`}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className={styles.hiddenInput}
                     onChange={(e) => uploadFile('cover-image', 'coverImage', e.target.files[0], setCoverUploading)}
                     disabled={coverUploading}
                   />
-                  {coverUploading ? <Spinner /> : <><CameraIcon /> <span style={{ marginLeft: 8 }}>Change Cover</span></>}
+                  {coverUploading ? <Spinner /> : <><CameraIcon /> <span className={styles.overlayText}>Change Cover</span></>}
                 </label>
               </div>
             </div>
 
             {/* Avatar Upload */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-              <div style={{ position: 'relative', width: 100, height: 100, borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-elevated)' }}>
-                {user?.avatar && <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Avatar" />}
-                <label style={{
-                  position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                  background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', color: 'white', opacity: avatarUploading ? 1 : 0
-                }} className="avatar-hover-layer">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    style={{ display: 'none' }} 
+            <div className={styles.avatarRow}>
+              <div className={styles.avatarWrap}>
+                <Avatar src={user?.avatar} name={user?.fullName} size={100} />
+                <label className={`${styles.overlay} ${styles.avatarOverlay} ${avatarUploading ? styles.overlayActive : ''}`}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className={styles.hiddenInput}
                     onChange={(e) => uploadFile('avatar', 'avatar', e.target.files[0], setAvatarUploading)}
                     disabled={avatarUploading}
                   />
@@ -140,9 +134,9 @@ export default function Settings() {
                 </label>
               </div>
               <div>
-                <h3 style={{ fontSize: 18 }}>Profile Picture</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
-                  JPG, JPEG, or PNG formats only. 
+                <h3 className={styles.avatarTitle}>Profile Picture</h3>
+                <p className={styles.avatarHint}>
+                  JPG, JPEG, or PNG formats only.
                 </p>
               </div>
             </div>
@@ -151,98 +145,62 @@ export default function Settings() {
         </section>
 
         {/* Profile Details Form */}
-        <section className="setting-section">
-          <h2>Account Details</h2>
-          <form style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 20 }} onSubmit={handleProfileUpdate}>
-            <div className="input-group">
-              <label className="input-label">Full Name</label>
-              <input 
-                className="input" 
-                value={profileForm.fullName}
-                onChange={e => setProfileForm(f => ({ ...f, fullName: e.target.value }))}
-              />
-            </div>
-            <div className="input-group">
-              <label className="input-label">Email Address</label>
-              <input 
-                type="email"
-                className="input" 
-                value={profileForm.email}
-                onChange={e => setProfileForm(f => ({ ...f, email: e.target.value }))}
-              />
-            </div>
-            <div>
-              <button type="submit" className="btn btn-primary" disabled={loadingProfile}>
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Account Details</h2>
+          <form className={styles.form} onSubmit={handleProfileUpdate}>
+            <Input
+              label="Full Name"
+              value={profileForm.fullName}
+              onChange={e => setProfileForm(f => ({ ...f, fullName: e.target.value }))}
+            />
+            <Input
+              label="Email Address"
+              type="email"
+              value={profileForm.email}
+              onChange={e => setProfileForm(f => ({ ...f, email: e.target.value }))}
+            />
+            <div className={styles.actions}>
+              <Button type="submit" variant="primary" loading={loadingProfile}>
                 {loadingProfile ? 'Saving...' : 'Save Profile'}
-              </button>
+              </Button>
             </div>
           </form>
         </section>
 
         {/* Password Form */}
-        <section className="setting-section">
-          <h2>Security</h2>
-          <form style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 20 }} onSubmit={handlePasswordUpdate}>
-            <div className="input-group">
-              <label className="input-label">Current Password</label>
-              <input 
-                type="password"
-                className="input" 
-                placeholder="Enter current password"
-                value={passForm.oldPassword}
-                onChange={e => setPassForm(f => ({ ...f, oldPassword: e.target.value }))}
-              />
-            </div>
-            <div className="input-group">
-              <label className="input-label">New Password</label>
-              <input 
-                type="password"
-                className="input" 
-                placeholder="Enter new password"
-                value={passForm.newPassword}
-                onChange={e => setPassForm(f => ({ ...f, newPassword: e.target.value }))}
-              />
-            </div>
-            <div className="input-group">
-              <label className="input-label">Confirm New Password</label>
-              <input 
-                type="password"
-                className="input" 
-                placeholder="Confirm new password"
-                value={passForm.confirmPassword}
-                onChange={e => setPassForm(f => ({ ...f, confirmPassword: e.target.value }))}
-              />
-            </div>
-            <div>
-              <button type="submit" className="btn btn-secondary" disabled={loadingPass}>
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Security</h2>
+          <form className={styles.form} onSubmit={handlePasswordUpdate}>
+            <Input
+              label="Current Password"
+              type="password"
+              placeholder="Enter current password"
+              value={passForm.oldPassword}
+              onChange={e => setPassForm(f => ({ ...f, oldPassword: e.target.value }))}
+            />
+            <Input
+              label="New Password"
+              type="password"
+              placeholder="Enter new password"
+              value={passForm.newPassword}
+              onChange={e => setPassForm(f => ({ ...f, newPassword: e.target.value }))}
+            />
+            <Input
+              label="Confirm New Password"
+              type="password"
+              placeholder="Confirm new password"
+              value={passForm.confirmPassword}
+              onChange={e => setPassForm(f => ({ ...f, confirmPassword: e.target.value }))}
+            />
+            <div className={styles.actions}>
+              <Button type="submit" variant="secondary" loading={loadingPass}>
                 {loadingPass ? 'Changing...' : 'Change Password'}
-              </button>
+              </Button>
             </div>
           </form>
         </section>
 
       </div>
-
-      <style>{`
-        .setting-section {
-          background: var(--bg-surface);
-          border: 1px solid var(--border);
-          border-radius: 12px;
-          padding: 24px;
-        }
-        .setting-section h2 {
-          font-size: 18px;
-          font-weight: 600;
-          padding-bottom: 16px;
-          border-bottom: 1px solid var(--border);
-        }
-        .avatar-hover-layer {
-          transition: opacity 0.2s ease;
-        }
-        .avatar-hover-layer:hover {
-          opacity: 1 !important;
-        }
-      `}</style>
     </>
   )
 }

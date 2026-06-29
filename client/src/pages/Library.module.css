@@ -1,0 +1,77 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   LIBRARY PAGE — token-driven, no inline presentational styles.
+   ─────────────────────────────────────────────────────────────────────
+   Regions:
+     - .header  : title block + optional "Clear history" action
+     - .tabsRow : shared Tabs spacing
+     - .grid    : responsive VideoCard grid (mirrors Home)
+     - .tweets  : vertical tweet list for the Tweets tab
+═══════════════════════════════════════════════════════════════════════ */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  line-height: var(--lh-2xl);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.tabsRow {
+  margin-bottom: var(--sp-6);
+}
+
+/* ── RESPONSIVE VIDEO GRID (1 / 2 / auto-fill ≥3) ───────────────────── */
+.grid {
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+/* ── TWEETS LIST ────────────────────────────────────────────────────── */
+.tweets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.tweet {
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.tweetContent {
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+.tweetMeta {
+  display: block;
+  margin-top: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}

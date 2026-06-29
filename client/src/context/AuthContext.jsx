@@ -44,7 +44,7 @@ export function AuthProvider({ children }) {
   }
 
   const logout = async () => {
-    try { await api.post('/users/logout') } catch {}
+    try { await api.post('/users/logout') } catch { /* ignore logout request errors; clear local session regardless */ }
     setToken(null)
     setUser(null)
     window.location.href = '/login'
@@ -53,12 +53,13 @@ export function AuthProvider({ children }) {
   const refreshUser = () => fetchMe()
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, setUser, loading, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be inside AuthProvider')

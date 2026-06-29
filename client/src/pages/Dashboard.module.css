@@ -1,0 +1,427 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   DASHBOARD PAGE — token-driven, no inline presentational styles.
+   ─────────────────────────────────────────────────────────────────────
+   Regions:
+     - .header     : title block + "Upload Video" action
+     - .statsGrid  : responsive StatCard row (+ matching skeletons)
+     - .panel      : "Your Content" surface wrapping the video list
+     - .row        : a single channel video entry with edit/delete actions
+     - .editForm   : fields inside the edit Modal
+═══════════════════════════════════════════════════════════════════════ */
+
+/* ── HEADER ─────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  line-height: var(--lh-2xl);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.subtitle {
+  margin-top: var(--sp-1);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  color: var(--text-muted);
+}
+
+/* ── STATS GRID ─────────────────────────────────────────────────────── */
+.statsGrid {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: 1fr;
+  margin-bottom: var(--sp-8);
+}
+
+@media (min-width: 480px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .statsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+/* ── STAT CARD ──────────────────────────────────────────────────────── */
+.statCard {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease);
+}
+
+.statCard:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+}
+
+.statIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  color: var(--tone, var(--info));
+  background: color-mix(in srgb, var(--tone, var(--info)) 14%, transparent);
+}
+
+.statIcon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.statBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  line-height: var(--lh-xl);
+  font-weight: var(--fw-bold);
+  color: var(--tone, var(--text-primary));
+}
+
+.statLabel {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  color: var(--text-muted);
+}
+
+/* Tone variants — each points the local --tone var at a status/brand token. */
+.toneInfo {
+  --tone: var(--info);
+}
+.toneSuccess {
+  --tone: var(--success);
+}
+.toneDanger {
+  --tone: var(--danger);
+}
+.toneBrand {
+  --tone: var(--brand);
+}
+.toneWarning {
+  --tone: var(--warning);
+}
+
+/* ── CONTENT PANEL ──────────────────────────────────────────────────── */
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.panelTitle {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.panelCount {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+}
+
+/* ── VIDEO ROW ──────────────────────────────────────────────────────── */
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.rowMain {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.thumb {
+  flex: 0 0 auto;
+  width: 120px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+.rowInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.videoTitle {
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 360px;
+}
+
+.videoDesc {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 360px;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+}
+
+.metaItem {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  color: var(--text-secondary);
+}
+
+.dot {
+  color: var(--text-muted);
+}
+
+/* Visibility badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 2px var(--sp-2);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+}
+
+.badgePublic {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 16%, transparent);
+}
+
+.badgePrivate {
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+}
+
+/* Actions cluster */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* ── PUBLISH TOGGLE ─────────────────────────────────────────────────── */
+.toggle {
+  position: relative;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease);
+}
+
+.toggleOn {
+  background: var(--success);
+}
+
+.toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  background: var(--c-white);
+  transition: transform var(--t-fast) var(--ease);
+}
+
+.toggleOn .toggleThumb {
+  transform: translateX(16px);
+}
+
+/* ── EDIT FORM (inside Modal) ───────────────────────────────────────── */
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-secondary);
+}
+
+.input,
+.textarea {
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color var(--t-fast) var(--ease);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+.input:focus-visible,
+.textarea:focus-visible {
+  border-color: var(--border-active);
+}
+
+.thumbZone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  overflow: hidden;
+  border: 1px dashed var(--border-hover);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  cursor: pointer;
+}
+
+.thumbInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.thumbPreview {
+  width: 100%;
+  height: 100%;
+  max-height: 200px;
+  object-fit: cover;
+}
+
+.thumbHint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.thumbCaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--fs-xs);
+  text-align: center;
+  color: var(--text-on-brand);
+  background: var(--scrim);
+  pointer-events: none;
+}
+
+/* Confirmation copy in the delete Modal */
+.confirmText {
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  color: var(--text-secondary);
+}
+
+.confirmTitle {
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+/* ── RESPONSIVE: stack rows on narrow screens ───────────────────────── */
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    justify-content: flex-end;
+  }
+
+  .videoTitle,
+  .videoDesc {
+    max-width: none;
+  }
+}

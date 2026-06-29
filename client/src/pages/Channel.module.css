@@ -1,0 +1,283 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   CHANNEL PAGE — token-driven, no inline presentational styles.
+   ─────────────────────────────────────────────────────────────────────
+   Regions:
+     - .cover        : banner image / placeholder
+     - .header       : overlapping avatar + identity + actions row
+     - .tabContent   : per-tab body (videos grid / playlists / tweets)
+═══════════════════════════════════════════════════════════════════════ */
+
+/* ── COVER BANNER ───────────────────────────────────────────────────── */
+.cover {
+  width: 100%;
+  height: 200px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+
+.coverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.coverPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+}
+
+/* ── HEADER ROW ─────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-5);
+  padding: 0 var(--sp-1);
+  margin-top: var(--sp-4);
+}
+
+/* Avatar overlaps up into the cover banner. */
+.avatar {
+  margin-top: calc(-1 * var(--sp-10));
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-md);
+}
+
+.info {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-top: var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  line-height: var(--lh-2xl);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.handle {
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  color: var(--text-muted);
+}
+
+.statsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  color: var(--text-secondary);
+}
+
+.statsRow .dot {
+  color: var(--text-muted);
+}
+
+.actions {
+  flex: 0 0 auto;
+  padding-top: var(--sp-3);
+}
+
+/* ── TABS BODY ──────────────────────────────────────────────────────── */
+.tabs {
+  margin-top: var(--sp-5);
+}
+
+.tabContent {
+  margin-top: var(--sp-6);
+}
+
+/* Responsive video / playlist grid (mirrors the Home feed grid). */
+.grid {
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+/* ── PLAYLIST CARDS ─────────────────────────────────────────────────── */
+.playlistCard {
+  display: block;
+  text-decoration: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition:
+    border-color var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease);
+}
+
+.playlistCard:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+}
+
+.playlistCard:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.playlistThumb {
+  aspect-ratio: 16 / 9;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+}
+
+.playlistBody {
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.playlistName {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.playlistDesc {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── TWEETS FEED ────────────────────────────────────────────────────── */
+.tweets {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.composer {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-start;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  flex: 1 1 auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  transition: border-color var(--t-fast) var(--ease);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.input:focus-visible,
+.textarea:focus-visible {
+  outline: none;
+  border-color: var(--border-active);
+  box-shadow: var(--focus-ring);
+}
+
+.tweetCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4) var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.tweetRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+
+.tweetText {
+  margin: 0;
+  flex: 1 1 auto;
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tweetActions {
+  display: flex;
+  gap: var(--sp-1);
+  flex: 0 0 auto;
+}
+
+.tweetTime {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  color: var(--text-muted);
+}
+
+.tweetEdit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.editActions {
+  display: flex;
+  gap: var(--sp-2);
+  justify-content: flex-end;
+}
+
+/* Small inline icon glyphs inherit color via currentColor. */
+.icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}

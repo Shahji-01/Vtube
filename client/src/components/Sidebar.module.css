@@ -1,0 +1,184 @@
+/* Sidebar — primary navigation. Supports a docked (inline, pushes content)
+   mode and an overlay (slide-in drawer + scrim) mode. All presentation is
+   expressed through semantic Design_System tokens; no inline styles. */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  background: var(--bg-base);
+  border-right: 1px solid var(--border);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* ── Docked: participates in normal flow; the Layout offsets the main
+   content by --sidebar-w so the two never overlap (Req 5.1). ───────────── */
+.docked {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  height: calc(100vh - var(--navbar-h));
+  position: sticky;
+  top: var(--navbar-h);
+  transition:
+    width var(--t-slow) var(--ease),
+    opacity var(--t-slow) var(--ease);
+}
+
+.docked.collapsed {
+  width: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* ── Overlay: fixed drawer that slides over the content, layered above the
+   scrim (Req 5.3). Hidden (and removed from the tab order) while closed. ── */
+.overlay {
+  position: fixed;
+  top: var(--navbar-h);
+  left: 0;
+  width: var(--sidebar-w);
+  height: calc(100vh - var(--navbar-h));
+  z-index: calc(var(--z-sidebar-overlay) + 1);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition:
+    transform var(--t-base) var(--ease),
+    visibility var(--t-base) var(--ease);
+}
+
+.overlay.open {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+/* ── Scrim: interactive backdrop covering the main content area, layered
+   above the content and below the drawer (Req 5.3, 5.4). It is a real
+   button so it is operable by keyboard, not pointer-only. ──────────────── */
+.scrim {
+  position: fixed;
+  top: var(--navbar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-sidebar-overlay);
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: var(--scrim);
+  cursor: pointer;
+  animation: sidebar-scrim-in var(--t-base) var(--ease);
+}
+
+@keyframes sidebar-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Section labels + separator ────────────────────────────────────────── */
+.sectionLabel {
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: var(--sp-2) var(--sp-3) var(--sp-1);
+  margin-top: var(--sp-1);
+}
+
+.sep {
+  height: 1px;
+  background: var(--border);
+  margin: var(--sp-2) 0;
+}
+
+/* ── Nav item (anchor styled as a row) ─────────────────────────────────── */
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-base);
+  color: var(--text-secondary);
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  transition:
+    background-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease);
+}
+
+.navItem:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.navItem:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  color: var(--text-primary);
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  transition: transform var(--t-base) var(--ease-spring);
+}
+
+.navItem:hover .icon svg {
+  transform: scale(1.1);
+}
+
+/* ── Active route indicator (Req 5.6) ──────────────────────────────────── */
+.active {
+  background: var(--brand-muted);
+  color: var(--brand);
+  font-weight: var(--fw-semibold);
+}
+
+.active:hover {
+  background: var(--brand-muted);
+  color: var(--brand);
+}
+
+.active .icon svg {
+  stroke: var(--brand);
+}
+
+.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--brand);
+}

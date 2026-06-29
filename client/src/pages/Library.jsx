@@ -3,24 +3,57 @@ import { useSearchParams } from 'react-router-dom'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import { formatTimeAgo } from '../utils/formatters'
 import VideoCard, { VideoCardSkeleton } from '../components/VideoCard'
+import Tabs from '../components/ui/Tabs'
+import KebabMenu from '../components/ui/KebabMenu'
+import EmptyState from '../components/ui/EmptyState'
+import Button from '../components/ui/Button'
+import styles from './Library.module.css'
+
+/* Decorative icons (token-colored via the consuming module). */
+const TrashIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6L17.5 20.5A2 2 0 0 1 15.5 22h-7A2 2 0 0 1 6.5 20.5L5 6m3-3h8" />
+    <line x1="10" y1="11" x2="10" y2="17" />
+    <line x1="14" y1="11" x2="14" y2="17" />
+  </svg>
+)
+
+const LibraryIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <rect x="3" y="4" width="18" height="14" rx="2" />
+    <line x1="3" y1="9" x2="21" y2="9" />
+    <polygon points="11 12 15 14 11 16 11 12" fill="currentColor" stroke="none" />
+  </svg>
+)
+
+const TABS = [
+  { key: 'history', label: 'Watch History' },
+  { key: 'liked', label: 'Liked Videos' },
+  { key: 'watch-later', label: 'Watch Later' },
+  { key: 'tweets', label: 'Tweets' },
+]
+
+const EMPTY_COPY = {
+  history: 'Videos you watch will appear here.',
+  liked: 'Videos you like will appear here.',
+  'watch-later': 'Videos you save to Watch Later will appear here.',
+  tweets: 'Tweets will appear here.',
+}
 
 export default function Library() {
   const { user } = useAuth()
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = searchParams.get('tab') || 'history'
+  const requestedTab = searchParams.get('tab')
+  const activeTab = TABS.some((t) => t.key === requestedTab) ? requestedTab : 'history'
 
-  const [data,    setData]    = useState([])
+  const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState(null)
+  const [error, setError] = useState(null)
   const [clearing, setClearing] = useState(false)
-
-  const TABS = [
-    { id: 'history',  label: 'Watch History' },
-    { id: 'liked',    label: 'Liked Videos'  },
-    { id: 'tweets',   label: 'Tweets'        },
-  ]
 
   useEffect(() => {
     if (!user) return
@@ -29,11 +62,21 @@ export default function Library() {
 
     let endpoint = ''
     if (activeTab === 'history') endpoint = '/users/history'
-    if (activeTab === 'liked')   endpoint = '/likes/videos'
-    if (activeTab === 'tweets')  endpoint = `/tweets/user/${user._id}`
+    if (activeTab === 'liked') endpoint = '/likes/videos'
+    if (activeTab === 'watch-later') endpoint = '/watch-later'
+    if (activeTab === 'tweets') endpoint = `/tweets/user/${user._id}`
 
-    api.get(endpoint)
-      .then(({ data: d }) => setData(d?.data?.docs || d?.data || []))
+    api
+      .get(endpoint)
+      .then(({ data: d }) => {
+        // Watch Later returns entries shaped { _id, user, video, createdAt }
+        // with `video` populated — map to the underlying video docs for the grid.
+        if (activeTab === 'watch-later') {
+          setData((d?.data || []).map((entry) => entry.video).filter(Boolean))
+        } else {
+          setData(d?.data?.docs || d?.data || [])
+        }
+      })
       .catch(() => setError('Failed to load'))
       .finally(() => setLoading(false))
   }, [activeTab, user])
@@ -41,139 +84,159 @@ export default function Library() {
   const setTab = (tab) => setSearchParams({ tab })
 
   const handleClearHistory = async () => {
-    if (!window.confirm('Are you sure you want to clear your entire watch history? This cannot be undone.')) return
-    
+    if (
+      !window.confirm(
+        'Are you sure you want to clear your entire watch history? This cannot be undone.'
+      )
+    )
+      return
+
     setClearing(true)
     try {
       await api.delete('/users/history')
       setData([])
       toast({ message: 'Watch history cleared', type: 'success' })
-    } catch (err) {
+    } catch {
       toast({ message: 'Failed to clear history', type: 'error' })
     } finally {
       setClearing(false)
     }
   }
 
+  // Remove a single video from watch history (DELETE /users/history/:videoId).
   const handleRemoveFromHistory = async (videoId) => {
     try {
       await api.delete(`/users/history/${videoId}`)
-      setData(prev => prev.filter(v => v._id !== videoId))
+      setData((prev) => prev.filter((v) => v._id !== videoId))
       toast({ message: 'Removed from history', type: 'success' })
     } catch {
       toast({ message: 'Failed to remove from history', type: 'error' })
     }
   }
 
+  // Remove a video from Liked Videos by toggling the like off
+  // (POST /likes/toggle/v/:videoId).
+  const handleRemoveFromLiked = async (videoId) => {
+    try {
+      await api.post(`/likes/toggle/v/${videoId}`)
+      setData((prev) => prev.filter((v) => v._id !== videoId))
+      toast({ message: 'Removed from liked videos', type: 'success' })
+    } catch {
+      toast({ message: 'Failed to remove video', type: 'error' })
+    }
+  }
+
+  // Build the kebab menu for a video card based on the active tab. Each menu
+  // exposes exactly one item-removal action backed by an existing endpoint.
+  const menuFor = (video) => {
+    if (activeTab === 'history') {
+      return (
+        <KebabMenu
+          items={[
+            {
+              label: 'Remove from history',
+              tone: 'danger',
+              icon: <TrashIcon />,
+              onSelect: () => handleRemoveFromHistory(video._id),
+            },
+          ]}
+        />
+      )
+    }
+    if (activeTab === 'liked') {
+      return (
+        <KebabMenu
+          items={[
+            {
+              label: 'Remove from liked videos',
+              tone: 'danger',
+              icon: <TrashIcon />,
+              onSelect: () => handleRemoveFromLiked(video._id),
+            },
+          ]}
+        />
+      )
+    }
+    return null
+  }
+
+  let content
+  if (!user) {
+    content = (
+      <EmptyState
+        icon={<LibraryIcon />}
+        title="Sign in to view your library"
+        subtitle="Your watch history and liked videos will appear here."
+      />
+    )
+  } else if (loading) {
+    content = (
+      <div className={styles.grid}>
+        {Array.from({ length: 8 }).map((_, i) => (
+          <VideoCardSkeleton key={i} />
+        ))}
+      </div>
+    )
+  } else if (error) {
+    content = (
+      <EmptyState tone="error" title="Failed to load" subtitle={error} />
+    )
+  } else if (data.length === 0) {
+    content = (
+      <EmptyState
+        icon={<LibraryIcon />}
+        title="Nothing here yet"
+        subtitle={EMPTY_COPY[activeTab]}
+      />
+    )
+  } else if (activeTab === 'tweets') {
+    content = (
+      <div className={styles.tweets}>
+        {data.map((tweet) => (
+          <div key={tweet._id} className={styles.tweet}>
+            <p className={styles.tweetContent}>{tweet.content}</p>
+            <span className={styles.tweetMeta}>
+              by @{tweet.owner?.username} • {formatTimeAgo(tweet.createdAt)}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  } else {
+    content = (
+      <div className={styles.grid}>
+        {data.map((v) => (
+          <VideoCard key={v._id} video={v} menu={menuFor(v)} />
+        ))}
+      </div>
+    )
+  }
+
   return (
     <>
-      <div className="page-header">
-        <h1 className="page-title">Library</h1>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Library</h1>
         {activeTab === 'history' && data.length > 0 && (
-          <button 
-            className="btn-outline danger" 
-            style={{ padding: '6px 14px', fontSize: 13 }}
+          <Button
+            variant="danger"
+            size="sm"
+            loading={clearing}
             onClick={handleClearHistory}
-            disabled={clearing}
           >
-            {clearing ? 'Clearing...' : 'Clear Watch History'}
-          </button>
+            {clearing ? 'Clearing…' : 'Clear Watch History'}
+          </Button>
         )}
       </div>
 
-      <div className="tabs-nav" style={{ marginBottom: 24 }}>
-        {TABS.map(t => (
-          <button key={t.id} className={`tab-btn ${activeTab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        items={TABS}
+        active={activeTab}
+        onChange={setTab}
+        label="Library sections"
+        className={styles.tabsRow}
+      />
 
-      {!user ? (
-        <div className="empty-state">
-          <h2 className="empty-title">Sign in to view your library</h2>
-          <p className="empty-sub">Your watch history and liked videos will appear here.</p>
-        </div>
-      ) : loading ? (
-        <div className="video-grid">
-          {Array.from({ length: 8 }).map((_, i) => <VideoCardSkeleton key={i} />)}
-        </div>
-      ) : error ? (
-        <div className="empty-state">
-          <h2 className="empty-title">Failed to Load</h2>
-          <p className="empty-sub">{error}</p>
-        </div>
-      ) : data.length === 0 ? (
-        <div className="empty-state">
-          <h2 className="empty-title">Nothing here yet</h2>
-          <p className="empty-sub">
-            {activeTab === 'history' ? "Videos you watch will appear here."
-             : activeTab === 'liked' ? "Videos you like will appear here."
-             : "Tweets will appear here."}
-          </p>
-        </div>
-      ) : activeTab === 'tweets' ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {data.map(tweet => (
-            <div key={tweet._id} style={{
-              background: 'var(--bg-surface)', border: '1px solid var(--border)',
-              borderRadius: 12, padding: '16px 18px'
-            }}>
-              <p style={{ fontSize: 15, color: 'var(--text-primary)', lineHeight: 1.6 }}>{tweet.content}</p>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, display: 'block' }}>
-                by @{tweet.owner?.username}
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="video-grid">
-          {data.map(v => (
-            <div key={v._id} style={{ position: 'relative' }} className="history-card-wrapper">
-              <VideoCard video={v} />
-              {activeTab === 'history' && (
-                <button 
-                  className="remove-history-btn" 
-                  onClick={() => handleRemoveFromHistory(v._id)}
-                  title="Remove from history"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <style>{`
-        .history-card-wrapper .remove-history-btn {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          background: rgba(0, 0, 0, 0.7);
-          color: white;
-          border: none;
-          border-radius: 50%;
-          width: 28px;
-          height: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          opacity: 0;
-          transition: all 0.2s ease;
-          z-index: 10;
-        }
-        .history-card-wrapper:hover .remove-history-btn {
-          opacity: 1;
-        }
-        .remove-history-btn:hover {
-          background: var(--red);
-          transform: scale(1.1);
-        }
-      `}</style>
+      {content}
     </>
   )
 }

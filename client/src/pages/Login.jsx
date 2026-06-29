@@ -2,23 +2,26 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import { useAnnouncer } from '../context/AnnouncerContext'
 import { getErrorMessage } from '../utils/formatters'
-import Spinner from '../components/Spinner'
+import Input from '../components/ui/Input'
+import Button from '../components/ui/Button'
+import styles from './Auth.module.css'
 
 const PlayIcon = () => (
-  <svg viewBox="0 0 24 24" style={{ width: 22, height: 22, fill: 'white' }}>
-    <polygon points="5 3 19 12 5 21 5 3"/>
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <polygon points="5 3 19 12 5 21 5 3" />
   </svg>
 )
 const EyeIcon = () => (
-  <svg viewBox="0 0 24 24" style={{ width: 16, height: 16, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}>
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
   </svg>
 )
 const EyeOffIcon = () => (
-  <svg viewBox="0 0 24 24" style={{ width: 16, height: 16, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}>
-    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-    <line x1="1" y1="1" x2="23" y2="23"/>
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+    <line x1="1" y1="1" x2="23" y2="23" />
   </svg>
 )
 
@@ -26,6 +29,7 @@ export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
+  const { announce } = useAnnouncer()
 
   const [form, setForm] = useState({ email: '', password: '' })
   const [errors, setErrors] = useState({})
@@ -49,7 +53,11 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     const errs = validate()
-    if (Object.keys(errs).length) { setErrors(errs); return }
+    if (Object.keys(errs).length) {
+      setErrors(errs)
+      announce('Please correct the highlighted fields and try again.')
+      return
+    }
 
     setLoading(true)
     try {
@@ -57,78 +65,77 @@ export default function Login() {
       toast({ message: 'Welcome back!', type: 'success' })
       navigate('/')
     } catch (err) {
-      toast({ message: getErrorMessage(err), type: 'error' })
+      const message = getErrorMessage(err)
+      toast({ message, type: 'error' })
+      announce(message)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-bg">
-        <div className="auth-bg-glow" />
+    <div className={styles.page}>
+      <div className={styles.bg}>
+        <div className={styles.glow} />
       </div>
 
-      <div className="auth-card">
-        <div className="auth-logo">
-          <div className="auth-logo-icon"><PlayIcon /></div>
-          <h1 className="auth-title">Sign in to VTube</h1>
-          <p className="auth-sub">Welcome back to your creator journey</p>
+      <div className={styles.card}>
+        <div className={styles.logo}>
+          <div className={styles.logoIcon}><PlayIcon /></div>
+          <h1 className={styles.title}>Sign in to VTube</h1>
+          <p className={styles.sub}>Welcome back to your creator journey</p>
         </div>
 
-        <form className="auth-form" onSubmit={handleSubmit} noValidate>
-          <div className="input-group">
-            <label className="input-label">Email address</label>
-            <input
-              id="login-email"
-              className={`input ${errors.email ? 'error' : ''}`}
-              type="email"
-              placeholder="you@example.com"
-              value={form.email}
-              onChange={(e) => handleChange('email', e.target.value)}
-              autoComplete="email"
-            />
-            {errors.email && <span className="input-error">{errors.email}</span>}
-          </div>
+        <form className={styles.form} onSubmit={handleSubmit} noValidate>
+          <Input
+            id="login-email"
+            label="Email address"
+            type="email"
+            placeholder="you@example.com"
+            value={form.email}
+            onChange={(e) => handleChange('email', e.target.value)}
+            autoComplete="email"
+            error={errors.email}
+          />
 
-          <div className="input-group">
-            <label className="input-label">Password</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                id="login-password"
-                className={`input ${errors.password ? 'error' : ''}`}
-                type={showPw ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={form.password}
-                onChange={(e) => handleChange('password', e.target.value)}
-                autoComplete="current-password"
-                style={{ paddingRight: 44 }}
-              />
+          <Input
+            id="login-password"
+            label="Password"
+            type={showPw ? 'text' : 'password'}
+            placeholder="••••••••"
+            value={form.password}
+            onChange={(e) => handleChange('password', e.target.value)}
+            autoComplete="current-password"
+            error={errors.password}
+            endAdornment={
               <button
                 type="button"
+                className={styles.pwToggle}
                 onClick={() => setShowPw(p => !p)}
-                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}
+                aria-label={showPw ? 'Hide password' : 'Show password'}
+                aria-pressed={showPw}
               >
                 {showPw ? <EyeOffIcon /> : <EyeIcon />}
               </button>
-            </div>
-            {errors.password && <span className="input-error">{errors.password}</span>}
-          </div>
+            }
+          />
 
-          <button
+          <Button
             id="login-submit"
             type="submit"
-            className="btn btn-primary btn-lg w-full"
-            disabled={loading}
-            style={{ marginTop: 8 }}
+            variant="primary"
+            size="lg"
+            fullWidth
+            loading={loading}
+            className={styles.submit}
           >
-            {loading ? <><Spinner /> Signing in…</> : 'Sign In'}
-          </button>
+            {loading ? 'Signing in…' : 'Sign In'}
+          </Button>
         </form>
 
-        <div className="auth-footer">
+        <div className={styles.footer}>
           New to VTube?{' '}
-          <Link to="/register" className="auth-link">Create an account</Link>
+          <Link to="/register" className={styles.link}>Create an account</Link>
         </div>
       </div>
     </div>

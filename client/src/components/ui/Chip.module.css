@@ -1,0 +1,49 @@
+/* Chip — presentational filter chip. Consumes semantic tokens only. */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease);
+}
+
+.chip:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.chip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Selected state — styled distinctly via brand-inverted fill. */
+.selected {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--bg-base);
+  font-weight: var(--fw-semibold);
+}
+
+.selected:hover {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--bg-base);
+}

@@ -1,0 +1,115 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   VTUBE — ANIMATIONS
+   ─────────────────────────────────────────────────────────────────────
+   Shared keyframes consumed by component modules (skeleton shimmer,
+   fades, slide-ins) plus the prefers-reduced-motion accessibility guard.
+
+   Durations/easings reference motion tokens from tokens.css.
+═══════════════════════════════════════════════════════════════════════ */
+
+/* ── SKELETON SHIMMER ───────────────────────────────────────────────── */
+/* Used by the Skeleton primitive and all loading placeholders. The
+   moving highlight is driven by background-position; component modules
+   pair this with a token-based gradient background. */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ── FADES ──────────────────────────────────────────────────────────── */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ── FADE + SLIDE (dropdowns, modals, toasts) ───────────────────────── */
+@keyframes fade-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── SLIDE-IN (sidebar overlay drawer) ──────────────────────────────── */
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* ── SPIN (Spinner primitive) ───────────────────────────────────────── */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── POP (like/subscribe spring feedback) ───────────────────────────── */
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   REDUCED-MOTION GUARD (accessibility)
+   ─────────────────────────────────────────────────────────────────────
+   When the user requests reduced motion, collapse every animation and
+   transition to a near-instant ~0.01s and force non-animated scrolling.
+   The guard is global and overrides component-level motion via !important.
+═══════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  html {
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,19 +1,4 @@
-import { getInitials, secureUrl } from '../utils/formatters'
-
-export default function Avatar({ src, name, size = 36 }) {
-  const style = { width: size, height: size, fontSize: size * 0.36 }
-  return (
-    <div className="avatar" style={style}>
-      {src
-        ? <img src={secureUrl(src)} alt={name || 'avatar'} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
-        : null
-      }
-      <div
-        className="avatar-fallback-inner"
-        style={{ display: src ? 'none' : 'flex' }}
-      >
-        {getInitials(name)}
-      </div>
-    </div>
-  )
-}
+// Avatar has moved to the design-system primitives under `ui/`.
+// This re-export preserves the existing `../components/Avatar` / `./Avatar`
+// import paths so callers keep working unchanged.
+export { default } from './ui/Avatar'

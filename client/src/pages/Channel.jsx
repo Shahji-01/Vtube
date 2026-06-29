@@ -1,26 +1,44 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { formatViews, formatTimeAgo, getErrorMessage } from '../utils/formatters'
-import Avatar from '../components/Avatar'
-import VideoCard, { VideoCardSkeleton } from '../components/VideoCard'
+import Avatar from '../components/ui/Avatar'
+import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
+import Tabs from '../components/ui/Tabs'
+import EmptyState from '../components/ui/EmptyState'
+import VideoCard from '../components/ui/VideoCard'
+import Skeleton, { VideoCardSkeleton, ChannelHeaderSkeleton } from '../components/ui/Skeleton'
+import styles from './Channel.module.css'
 
+/* ── Small inline icon glyphs (presentation via attributes + currentColor) ── */
 const TrashIcon = () => (
-  <svg viewBox="0 0 24 24" style={{ width: 14, height: 14, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}>
-    <polyline points="3 6 5 6 21 6"/><path d="M19 6L17.5 20.5A2 2 0 0 1 15.5 22h-7A2 2 0 0 1 6.5 20.5L5 6m3-3h8"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+  <svg className={styles.icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6L17.5 20.5A2 2 0 0 1 15.5 22h-7A2 2 0 0 1 6.5 20.5L5 6m3-3h8" />
+    <line x1="10" y1="11" x2="10" y2="17" />
+    <line x1="14" y1="11" x2="14" y2="17" />
   </svg>
 )
 
 const EditIcon = () => (
-  <svg viewBox="0 0 24 24" style={{ width: 14, height: 14, stroke: 'currentColor', fill: 'none', strokeWidth: 2 }}>
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  <svg className={styles.icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
   </svg>
 )
 
-function TweetsFeed({ userId, isOwner }) {
+const VideoGlyph = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+    <polygon points="23 7 16 12 23 17 23 7" />
+    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+  </svg>
+)
+
+/* ── Tweets tab ──────────────────────────────────────────────────────── */
+function TweetsFeed({ userId, isOwner, onCount }) {
   const [tweets, setTweets] = useState([])
   const [loading, setLoading] = useState(true)
   const [newTweet, setNewTweet] = useState('')
@@ -30,13 +48,28 @@ function TweetsFeed({ userId, isOwner }) {
   const [savingEdit, setSavingEdit] = useState(false)
   const toast = useToast()
 
+  const setTweetsAndCount = useCallback((updater) => {
+    setTweets((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      onCount?.(next.length)
+      return next
+    })
+  }, [onCount])
+
   useEffect(() => {
-    setLoading(true)
-    api.get(`/tweets/user/${userId}`)
-      .then(({data}) => setTweets(data?.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [userId])
+    const load = async () => {
+      setLoading(true)
+      try {
+        const { data } = await api.get(`/tweets/user/${userId}`)
+        setTweetsAndCount(data?.data || [])
+      } catch {
+        // Non-fatal: tweets simply render their empty state.
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [userId, setTweetsAndCount])
 
   const handlePost = async (e) => {
     e.preventDefault()
@@ -44,10 +77,10 @@ function TweetsFeed({ userId, isOwner }) {
     setPosting(true)
     try {
       const { data } = await api.post('/tweets', { content: newTweet })
-      setTweets(prev => [data.data, ...prev])
+      setTweetsAndCount((prev) => [data.data, ...prev])
       setNewTweet('')
       toast({ message: 'Tweet posted', type: 'success' })
-    } catch (err) {
+    } catch {
       toast({ message: 'Failed to post tweet', type: 'error' })
     } finally {
       setPosting(false)
@@ -55,10 +88,10 @@ function TweetsFeed({ userId, isOwner }) {
   }
 
   const handleDeleteTweet = async (tweetId) => {
-    if(!window.confirm('Delete this tweet?')) return
+    if (!window.confirm('Delete this tweet?')) return
     try {
       await api.delete(`/tweets/${tweetId}`)
-      setTweets(prev => prev.filter(t => t._id !== tweetId))
+      setTweetsAndCount((prev) => prev.filter((t) => t._id !== tweetId))
       toast({ message: 'Tweet deleted', type: 'success' })
     } catch {
       toast({ message: 'Failed to delete tweet', type: 'error' })
@@ -75,7 +108,7 @@ function TweetsFeed({ userId, isOwner }) {
     setSavingEdit(true)
     try {
       const { data } = await api.patch(`/tweets/${tweetId}`, { tweet: editTweetText })
-      setTweets(prev => prev.map(t => t._id === tweetId ? { ...t, content: data.data?.content || editTweetText } : t))
+      setTweets((prev) => prev.map((t) => (t._id === tweetId ? { ...t, content: data.data?.content || editTweetText } : t)))
       setEditingTweetId(null)
       toast({ message: 'Tweet updated', type: 'success' })
     } catch {
@@ -85,62 +118,81 @@ function TweetsFeed({ userId, isOwner }) {
     }
   }
 
-  if (loading) return <div style={{ padding: 20 }}>Loading tweets...</div>
+  if (loading) {
+    return (
+      <div className={styles.tweets}>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div className={styles.tweetCard} key={i}>
+            <Skeleton width="90%" height={14} />
+            <Skeleton width="60%" height={14} />
+            <Skeleton width={80} height={11} />
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className={styles.tweets}>
       {isOwner && (
-        <form onSubmit={handlePost} style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-          <input 
-            className="input" 
-            placeholder="Write a tweet..." 
-            value={newTweet} 
-            onChange={e => setNewTweet(e.target.value)} 
-            style={{ flex: 1 }}
+        <form onSubmit={handlePost} className={styles.composer}>
+          <input
+            className={styles.input}
+            placeholder="Write a tweet..."
+            value={newTweet}
+            onChange={(e) => setNewTweet(e.target.value)}
             disabled={posting}
+            aria-label="Write a tweet"
           />
-          <button type="submit" className="btn btn-primary" disabled={posting || !newTweet.trim()}>
-            {posting ? 'Posting...' : 'Post'}
-          </button>
+          <Button type="submit" variant="primary" loading={posting} disabled={!newTweet.trim()}>
+            Post
+          </Button>
         </form>
       )}
+
       {tweets.length === 0 ? (
-        <div className="empty-state"><p className="empty-sub">No tweets yet.</p></div>
+        <EmptyState
+          title="No tweets yet"
+          subtitle={isOwner ? 'Share your first thought with your audience.' : "This channel hasn't posted any tweets."}
+        />
       ) : (
-        tweets.map(t => (
-          <div key={t._id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+        tweets.map((t) => (
+          <div key={t._id} className={styles.tweetCard}>
             {editingTweetId === t._id ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className={styles.tweetEdit}>
                 <textarea
-                  className="comment-textarea"
+                  className={styles.textarea}
                   rows={3}
                   value={editTweetText}
-                  onChange={e => setEditTweetText(e.target.value)}
+                  onChange={(e) => setEditTweetText(e.target.value)}
+                  aria-label="Edit tweet"
                   autoFocus
                 />
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setEditingTweetId(null)} disabled={savingEdit}>Cancel</button>
-                  <button className="btn btn-primary btn-sm" onClick={() => handleSaveEdit(t._id)} disabled={savingEdit || !editTweetText.trim()}>
-                    {savingEdit ? 'Saving...' : 'Save'}
-                  </button>
+                <div className={styles.editActions}>
+                  <Button variant="ghost" size="sm" onClick={() => setEditingTweetId(null)} disabled={savingEdit}>
+                    Cancel
+                  </Button>
+                  <Button variant="primary" size="sm" loading={savingEdit} disabled={!editTweetText.trim()} onClick={() => handleSaveEdit(t._id)}>
+                    Save
+                  </Button>
                 </div>
               </div>
             ) : (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <p style={{ fontSize: 15, color: 'var(--text-primary)', lineHeight: 1.6, flex: 1, whiteSpace: 'pre-wrap' }}>{t.content}</p>
+              <div className={styles.tweetRow}>
+                <p className={styles.tweetText}>{t.content}</p>
                 {isOwner && (
-                  <div style={{ display: 'flex', gap: 6, marginLeft: 12 }}>
-                    <button onClick={() => openEditTweet(t)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }} title="Edit">
+                  <div className={styles.tweetActions}>
+                    <IconButton label="Edit tweet" size="sm" onClick={() => openEditTweet(t)}>
                       <EditIcon />
-                    </button>
-                    <button onClick={() => handleDeleteTweet(t._id)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }} title="Delete">
+                    </IconButton>
+                    <IconButton label="Delete tweet" size="sm" onClick={() => handleDeleteTweet(t._id)}>
                       <TrashIcon />
-                    </button>
+                    </IconButton>
                   </div>
                 )}
               </div>
             )}
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>{formatTimeAgo(t.createdAt)}</div>
+            <div className={styles.tweetTime}>{formatTimeAgo(t.createdAt)}</div>
           </div>
         ))
       )}
@@ -148,186 +200,232 @@ function TweetsFeed({ userId, isOwner }) {
   )
 }
 
-function PlaylistsFeed({ userId }) {
+/* ── Playlists tab ───────────────────────────────────────────────────── */
+function PlaylistsFeed({ userId, onCount }) {
   const [playlists, setPlaylists] = useState([])
   const [loading, setLoading] = useState(true)
-  const navigate = useNavigate()
 
   useEffect(() => {
-    setLoading(true)
-    api.get(`/playlist/user/${userId}`)
-      .then(({data}) => setPlaylists(data?.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [userId])
+    const load = async () => {
+      setLoading(true)
+      try {
+        const { data } = await api.get(`/playlist/user/${userId}`)
+        const list = data?.data || []
+        setPlaylists(list)
+        onCount?.(list.length)
+      } catch {
+        // Non-fatal: playlists simply render their empty state.
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [userId, onCount])
 
-  if (loading) return <div style={{ padding: 20 }}>Loading playlists...</div>
+  if (loading) {
+    return (
+      <div className={styles.grid}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <VideoCardSkeleton key={i} />
+        ))}
+      </div>
+    )
+  }
 
   if (playlists.length === 0) {
-    return <div className="empty-state"><p className="empty-sub">No playlists created.</p></div>
+    return <EmptyState title="No playlists" subtitle="This channel hasn't created any playlists." />
   }
 
   return (
-    <div className="video-grid">
-      {playlists.map(p => (
-        <div key={p._id} onClick={() => navigate(`/playlist/${p._id}`)} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', cursor: 'pointer' }}>
-          <div style={{ aspectRatio: '16/9', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'var(--text-muted)' }}>Playlist</span>
+    <div className={styles.grid}>
+      {playlists.map((p) => (
+        <Link key={p._id} to={`/playlist/${p._id}`} className={styles.playlistCard}>
+          <div className={styles.playlistThumb}>Playlist</div>
+          <div className={styles.playlistBody}>
+            <h3 className={styles.playlistName}>{p.name}</h3>
+            {p.description && <p className={styles.playlistDesc}>{p.description}</p>}
           </div>
-          <div style={{ padding: 12 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 600 }}>{p.name}</h3>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{p.description}</p>
-          </div>
-        </div>
+        </Link>
       ))}
     </div>
   )
 }
 
+/* ── Channel page ────────────────────────────────────────────────────── */
 export default function Channel() {
   const { username } = useParams()
-  const { user }     = useAuth()
-  const toast        = useToast()
-  const navigate     = useNavigate()
+  const { user } = useAuth()
+  const toast = useToast()
+  const navigate = useNavigate()
 
-  const [profile, setProfile]   = useState(null)
-  const [videos, setVideos]     = useState([])
-  const [loading, setLoading]   = useState(true)
+  const [profile, setProfile] = useState(null)
+  const [videos, setVideos] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [vLoading, setVLoading] = useState(false)
-  const [subscribed, setSub]    = useState(false)
-  const [activeTab, setTab]     = useState('videos')
+  const [subscribed, setSub] = useState(false)
+  const [subBusy, setSubBusy] = useState(false)
+  const [activeTab, setTab] = useState('videos')
 
-  useEffect(() => {
+  const [playlistCount, setPlaylistCount] = useState(null)
+  const [tweetCount, setTweetCount] = useState(null)
+
+  const loadChannel = useCallback(async () => {
     setLoading(true)
-    api.get(`/users/c/${username}`)
-      .then(async ({ data }) => {
-        const prof = data?.data
-        setProfile(prof)
-        setSub(prof?.isSubscribed || false)
-        setVLoading(true)
+    setError(false)
+    try {
+      const { data } = await api.get(`/users/c/${username}`)
+      const prof = data?.data
+      setProfile(prof)
+      setSub(prof?.isSubscribed || false)
+      setVLoading(true)
+      try {
         const vRes = await api.get(`/videos?userId=${prof._id}&limit=20`)
         setVideos(vRes.data?.data?.docs || vRes.data?.data || [])
-      })
-      .catch(() => toast({ message: 'Channel not found', type: 'error' }))
-      .finally(() => { setLoading(false); setVLoading(false) })
+      } finally {
+        setVLoading(false)
+      }
+    } catch {
+      setError(true)
+      setProfile(null)
+    } finally {
+      setLoading(false)
+    }
   }, [username])
 
+  useEffect(() => {
+    // Reset per-tab counts when switching channels.
+    setPlaylistCount(null)
+    setTweetCount(null)
+    loadChannel()
+  }, [loadChannel])
+
   const handleSubscribe = async () => {
-    if (!user) { toast({ message: 'Sign in to subscribe', type: 'error' }); return }
+    if (!user) {
+      toast({ message: 'Sign in to subscribe', type: 'error' })
+      return
+    }
+    setSubBusy(true)
     try {
       await api.post(`/subscriptions/toggle/c/${profile._id}`)
-      setSub(p => !p)
+      setSub((p) => !p)
       toast({ message: subscribed ? 'Unsubscribed' : 'Subscribed!', type: 'success' })
     } catch (err) {
       toast({ message: getErrorMessage(err), type: 'error' })
+    } finally {
+      setSubBusy(false)
     }
   }
 
+  // ── Skeleton state (Req 9.2) ──
   if (loading) {
-    return (
-      <>
-        <div className="skeleton" style={{ height: 200, borderRadius: 20, marginBottom: 0 }} />
-        <div style={{ display: 'flex', gap: 20, marginTop: 16, padding: '0 4px' }}>
-          <div className="skeleton" style={{ width: 96, height: 96, borderRadius: '50%', marginTop: -40 }} />
-          <div style={{ flex: 1, paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div className="skeleton skeleton-line" style={{ width: 200, height: 22 }} />
-            <div className="skeleton skeleton-line" style={{ width: 140, height: 14 }} />
-          </div>
-        </div>
-      </>
-    )
+    return <ChannelHeaderSkeleton />
   }
 
-  if (!profile) {
+  // ── Error state ──
+  if (error || !profile) {
     return (
-      <div className="empty-state">
-        <h2 className="empty-title">Channel Not Found</h2>
-      </div>
+      <EmptyState
+        tone="error"
+        title="Channel not found"
+        subtitle="We couldn't load this channel. It may not exist or the request failed."
+        action={
+          <Button variant="primary" onClick={loadChannel}>
+            Retry
+          </Button>
+        }
+      />
     )
   }
 
   const isOwner = user?.username === profile.username
 
+  // Per-tab counts (Req 14.4). `null`/undefined ⇒ Tabs renders no badge yet.
+  const tabItems = [
+    { key: 'videos', label: 'Videos', count: vLoading ? undefined : videos.length },
+    { key: 'playlists', label: 'Playlists', count: playlistCount ?? undefined },
+    { key: 'tweets', label: 'Tweets', count: tweetCount ?? undefined },
+  ]
+
   return (
     <>
       {/* Cover */}
-      <div className="channel-cover">
-        {profile.coverImage
-          ? <img src={profile.coverImage} alt="cover" />
-          : <div className="channel-cover-placeholder" />
-        }
+      <div className={styles.cover}>
+        {profile.coverImage ? (
+          <img className={styles.coverImg} src={profile.coverImage} alt="" />
+        ) : (
+          <div className={styles.coverPlaceholder} />
+        )}
       </div>
 
-      {/* Header row */}
-      <div className="channel-header">
-        <div className="channel-avatar-lg">
+      {/* Header */}
+      <div className={styles.header}>
+        <span className={styles.avatar}>
           <Avatar src={profile.avatar} name={profile.fullName} size={92} />
-        </div>
+        </span>
 
-        <div className="channel-info">
-          <h1 className="channel-name">{profile.fullName}</h1>
-          <div className="channel-handle">@{profile.username}</div>
-          <div className="channel-stats-row">
+        <div className={styles.info}>
+          <h1 className={styles.name}>{profile.fullName}</h1>
+          <div className={styles.handle}>@{profile.username}</div>
+          <div className={styles.statsRow}>
             <span>{formatViews(profile.subscribersCount)} subscribers</span>
-            <span>•</span>
+            <span className={styles.dot}>•</span>
             <span>{profile.channelsSubscribedToCount} subscriptions</span>
           </div>
         </div>
 
-        <div style={{ paddingTop: 54 }}>
+        <div className={styles.actions}>
           {isOwner ? (
-            <button
-              className="btn btn-secondary"
-              onClick={() => navigate('/settings')}
-            >
+            <Button variant="secondary" onClick={() => navigate('/settings')}>
               Customize Channel
-            </button>
+            </Button>
           ) : (
-            <button
-              className={`btn btn-subscribe ${subscribed ? 'subscribed' : ''}`}
-              onClick={handleSubscribe}
-            >
-              {subscribed ? 'Subscribed ✓' : 'Subscribe'}
-            </button>
+            <Button variant="subscribe" active={subscribed} loading={subBusy} onClick={handleSubscribe}>
+              {subscribed ? 'Subscribed' : 'Subscribe'}
+            </Button>
           )}
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="tabs-nav">
-        {['videos', 'playlists', 'tweets'].map(tab => (
-          <button
-            key={tab}
-            className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setTab(tab)}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        className={styles.tabs}
+        label="Channel sections"
+        items={tabItems}
+        active={activeTab}
+        onChange={setTab}
+      />
 
-      <div className="tab-content">
+      {/* Tab content */}
+      <div className={styles.tabContent} role="tabpanel">
         {activeTab === 'videos' && (
           vLoading ? (
-            <div className="video-grid">
-              {Array.from({ length: 8 }).map((_, i) => <VideoCardSkeleton key={i} />)}
+            <div className={styles.grid}>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <VideoCardSkeleton key={i} />
+              ))}
             </div>
           ) : videos.length === 0 ? (
-            <div className="empty-state">
-              <h2 className="empty-title">No videos yet</h2>
-              <p className="empty-sub">This channel hasn't uploaded any videos.</p>
-            </div>
+            <EmptyState
+              icon={<VideoGlyph />}
+              title="No videos yet"
+              subtitle="This channel hasn't uploaded any videos."
+            />
           ) : (
-            <div className="video-grid">
-              {videos.map(v => <VideoCard key={v._id} video={v} hideAvatar />)}
+            <div className={styles.grid}>
+              {videos.map((v) => (
+                <VideoCard key={v._id} video={v} hideAvatar />
+              ))}
             </div>
           )
         )}
+
         {activeTab === 'playlists' && (
-          <PlaylistsFeed userId={profile._id} />
+          <PlaylistsFeed userId={profile._id} onCount={setPlaylistCount} />
         )}
+
         {activeTab === 'tweets' && (
-          <TweetsFeed userId={profile._id} isOwner={isOwner} />
+          <TweetsFeed userId={profile._id} isOwner={isOwner} onCount={setTweetCount} />
         )}
       </div>
     </>

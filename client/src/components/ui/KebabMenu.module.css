@@ -1,0 +1,92 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   KEBAB MENU — "more options" control for VideoCard menu slots.
+   ─────────────────────────────────────────────────────────────────────
+   All presentation is token-driven (no raw color literals). The trigger sits
+   over a thumbnail in the VideoCard menu slot, so it carries a translucent
+   backdrop (built from the shared shadow primitive) for contrast against any
+   image. The dropdown is layered at --z-dropdown above surrounding cards.
+═══════════════════════════════════════════════════════════════════════ */
+
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Trigger backdrop so the three-dots icon stays legible over thumbnails. */
+.trigger {
+  background: var(--c-shadow-60);
+  color: var(--text-on-brand);
+}
+
+.trigger:hover {
+  background: var(--c-shadow-70);
+  color: var(--text-on-brand);
+}
+
+/* ── DROPDOWN ───────────────────────────────────────────────────────── */
+.menu {
+  position: absolute;
+  top: calc(100% + var(--sp-1));
+  right: 0;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-1);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dropdown);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease);
+}
+
+.item:hover {
+  background: var(--bg-hover);
+}
+
+.item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Destructive action (e.g. remove from history / playlist). */
+.danger {
+  color: var(--danger);
+}
+
+.danger:hover {
+  color: var(--danger);
+}
+
+.itemIcon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  line-height: 0;
+}
+
+.itemIcon svg {
+  width: 100%;
+  height: 100%;
+}

@@ -1,0 +1,112 @@
+/* IconButton — icon-only control. All presentation via semantic tokens. */
+
+.iconButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease);
+}
+
+.iconButton:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.iconButton:active {
+  transform: scale(0.94);
+}
+
+.iconButton:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  color: var(--text-primary);
+}
+
+.iconButton:disabled {
+  color: var(--text-disabled);
+  cursor: not-allowed;
+  background: transparent;
+  transform: none;
+}
+
+/* Active / pressed state */
+.active {
+  color: var(--brand);
+  background: var(--brand-muted);
+  border-color: var(--border-active);
+}
+
+.active:hover {
+  color: var(--brand);
+  background: var(--brand-muted);
+}
+
+/* Sizes */
+.md {
+  width: 40px;
+  height: 40px;
+}
+
+.sm {
+  width: 32px;
+  height: 32px;
+}
+
+/* Icon slot — sizes the embedded svg */
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.md .icon {
+  width: 22px;
+  height: 22px;
+}
+
+.sm .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.icon :global(svg),
+.icon > * {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Notification count indicator */
+.badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 var(--sp-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: var(--radius-full);
+  background: var(--brand);
+  color: var(--text-on-brand);
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  line-height: 1;
+  pointer-events: none;
+}

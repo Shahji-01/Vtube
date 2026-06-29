@@ -1,0 +1,86 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   HOME PAGE — token-driven, no inline presentational styles.
+   ─────────────────────────────────────────────────────────────────────
+   Layout regions:
+     - .filterBar : sticky chip row pinned just under the fixed navbar
+     - .grid      : responsive VideoCard / skeleton grid
+     - .more      : infinite-scroll footer (spinner / end message)
+═══════════════════════════════════════════════════════════════════════ */
+
+.home {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── STICKY FILTER CHIP ROW ─────────────────────────────────────────────
+   Sticks directly beneath the sticky navbar (--navbar-h) and sits below it
+   in the z-order (--z-sticky < --z-navbar). Negative margins make the bar
+   full-bleed across the content gutters so cards scroll cleanly underneath
+   the opaque background. */
+.filterBar {
+  position: sticky;
+  top: var(--navbar-h);
+  z-index: var(--z-sticky);
+  background: var(--bg-base);
+  margin: calc(-1 * var(--sp-6)) calc(-1 * var(--sp-4)) var(--sp-5);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+
+@media (min-width: 840px) {
+  .filterBar {
+    margin-left: calc(-1 * var(--sp-6));
+    margin-right: calc(-1 * var(--sp-6));
+    padding-left: var(--sp-6);
+    padding-right: var(--sp-6);
+  }
+}
+
+/* Horizontally scrollable chip strip (no visible scrollbar). */
+.chips {
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── RESPONSIVE VIDEO GRID ──────────────────────────────────────────────
+   1 column below 640px, 2 columns 640–1023px, and an auto-fill grid that
+   yields at least 3 columns at 1024px and above (Req 4.7-4.9, 14.1). */
+.grid {
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+/* ── INFINITE-SCROLL FOOTER ─────────────────────────────────────────── */
+.more {
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-8) 0;
+}
+
+.end {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  margin-top: var(--sp-10);
+  margin-bottom: var(--sp-5);
+}

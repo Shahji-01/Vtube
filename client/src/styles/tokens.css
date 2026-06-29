@@ -1,0 +1,288 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   VTUBE — DESIGN TOKENS (single source of truth)
+   ─────────────────────────────────────────────────────────────────────
+   Two-layer color model:
+     1. PRIMITIVES  — raw literal values (the only place raw colors live).
+     2. SEMANTICS   — role-based tokens that resolve to EXACTLY ONE
+                      primitive via var(). No semantic token holds a raw
+                      color literal (hex/rgb/rgba/hsl/hsla/named color).
+
+   Eight token categories are defined here, each with non-empty values:
+     color · typography · spacing · radius · elevation · z-index · layout · motion
+
+   Themes:
+     • Dark  theme is the default, declared under :root.
+     • Light theme is a complete, audited override under body.light-theme,
+       re-pointing every semantic color token to a light primitive.
+
+   Brand red (`--brand`) is reserved for accents, fills, and large text
+   (>= 24px, or >= 18.66px bold). It must NOT be used for small body text
+   on dark surfaces where it fails AA contrast. For red text, use it on
+   `--brand-muted` chips or at large sizes only.
+═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ╔═══════════════════════════════════════════════════════════════════╗
+     ║ 1a. COLOR — PRIMITIVES (raw values; DARK palette)                  ║
+     ╚═══════════════════════════════════════════════════════════════════╝ */
+
+  /* Brand red primitives */
+  --c-red-500:        #ff2d2d;   /* brand */
+  --c-red-700:        #cc1a1a;   /* brand pressed/hover */
+  --c-red-glow:       rgba(255, 45, 45, 0.35);
+  --c-red-muted:      rgba(255, 45, 45, 0.12);
+  --c-red-border:     rgba(255, 45, 45, 0.40);
+  --c-red-ring:       rgba(255, 45, 45, 0.45);
+
+  /* Dark neutral surface ramp */
+  --c-neutral-950:    #080808;
+  --c-neutral-900:    #111111;
+  --c-neutral-850:    #1a1a1a;
+  --c-neutral-800:    #222222;
+  --c-neutral-750:    #2a2a2a;
+
+  /* Dark neutral text ramp */
+  --c-neutral-100:    #f5f5f5;
+  --c-neutral-300:    #a1a1a1;
+  --c-neutral-500:    #666666;
+  --c-neutral-600:    #444444;
+  --c-white:          #ffffff;
+
+  /* Translucent white (dark-theme borders) */
+  --c-white-a06:      rgba(255, 255, 255, 0.06);
+  --c-white-a14:      rgba(255, 255, 255, 0.14);
+
+  /* Status primitives (dark-tuned) */
+  --c-green-500:      #22c55e;
+  --c-rose-500:       #ff4d4f;
+  --c-blue-500:       #3b82f6;
+  --c-amber-500:      #f59e0b;
+
+  /* Shadow / scrim color primitives (used to compose elevation tokens) */
+  --c-shadow-50:      rgba(0, 0, 0, 0.50);
+  --c-shadow-60:      rgba(0, 0, 0, 0.60);
+  --c-shadow-70:      rgba(0, 0, 0, 0.70);
+  --c-scrim:          rgba(0, 0, 0, 0.60);
+
+  /* ╔═══════════════════════════════════════════════════════════════════╗
+     ║ 1b. COLOR — SEMANTICS (DARK; each resolves to ONE primitive)       ║
+     ╚═══════════════════════════════════════════════════════════════════╝ */
+
+  /* Brand roles — accents/fills/large-text only */
+  --brand:            var(--c-red-500);
+  --brand-hover:      var(--c-red-700);
+  --brand-glow:       var(--c-red-glow);
+  --brand-muted:      var(--c-red-muted);
+
+  /* Surface roles (layered elevation) */
+  --bg-base:          var(--c-neutral-950);   /* app background */
+  --bg-surface:       var(--c-neutral-900);    /* cards / panels */
+  --bg-elevated:      var(--c-neutral-850);    /* inputs / raised */
+  --bg-overlay:       var(--c-neutral-800);    /* dropdowns / popovers */
+  --bg-hover:         var(--c-neutral-750);    /* hover wash */
+
+  /* Text roles
+     Contrast intents (dark theme):
+       --text-primary   on --bg-base/--bg-surface  -> AA body (>= 4.5:1)
+       --text-secondary on --bg-surface            -> AA body (>= 4.5:1)
+       --text-muted     reserved for non-essential metadata / large text
+       --text-on-brand  on --brand fills           -> AA large/non-text */
+  --text-primary:     var(--c-neutral-100);
+  --text-secondary:   var(--c-neutral-300);
+  --text-muted:       var(--c-neutral-500);
+  --text-disabled:    var(--c-neutral-600);
+  --text-on-brand:    var(--c-white);
+
+  /* Border roles */
+  --border:           var(--c-white-a06);
+  --border-hover:     var(--c-white-a14);
+  --border-active:    var(--c-red-border);
+
+  /* Status roles (toasts, like/dislike, validation) */
+  --success:          var(--c-green-500);
+  --danger:           var(--c-rose-500);
+  --info:             var(--c-blue-500);   /* replaces undefined --blue in Watch */
+  --warning:          var(--c-amber-500);
+
+  /* Scrim role (modal / sidebar overlay backdrop) */
+  --scrim:            var(--c-scrim);
+
+  /* ╔═══════════════════════════════════════════════════════════════════╗
+     ║ 2. TYPOGRAPHY                                                       ║
+     ╚═══════════════════════════════════════════════════════════════════╝ */
+  --font-body:        'DM Sans', system-ui, sans-serif;
+  --font-display:     'Outfit', system-ui, sans-serif;
+
+  /* Type scale (size + matching line-height) */
+  --fs-xs:            12px;   --lh-xs:   1.4;
+  --fs-sm:            13px;   --lh-sm:   1.45;
+  --fs-base:          14px;   --lh-base: 1.55;
+  --fs-md:            16px;   --lh-md:   1.5;
+  --fs-lg:            18px;   --lh-lg:   1.4;
+  --fs-xl:            20px;   --lh-xl:   1.3;
+  --fs-2xl:           26px;   --lh-2xl:  1.2;
+  --fs-3xl:           32px;   --lh-3xl:  1.15;
+
+  /* Weights */
+  --fw-regular:       400;
+  --fw-medium:        500;
+  --fw-semibold:      600;
+  --fw-bold:          700;
+  --fw-black:         800;
+
+  /* Letter spacing */
+  --tracking-tight:   -0.03em;
+  --tracking-normal:  0;
+
+  /* ╔═══════════════════════════════════════════════════════════════════╗
+     ║ 3. SPACING (4px base scale)                                         ║
+     ╚═══════════════════════════════════════════════════════════════════╝ */
+  --sp-1:             4px;
+  --sp-2:             8px;
+  --sp-3:             12px;
+  --sp-4:             16px;
+  --sp-5:             20px;
+  --sp-6:             24px;
+  --sp-8:             32px;
+  --sp-10:            40px;
+  --sp-12:            48px;
+
+  /* ╔═══════════════════════════════════════════════════════════════════╗
+     ║ 4. RADIUS                                                           ║
+     ╚═══════════════════════════════════════════════════════════════════╝ */
+  --radius-sm:        6px;
+  --radius-md:        10px;
+  --radius-lg:        14px;
+  --radius-xl:        20px;
+  --radius-full:      9999px;
+
+  /* ╔═══════════════════════════════════════════════════════════════════╗
+     ║ 5. ELEVATION (shadows compose color primitives)                    ║
+     ╚═══════════════════════════════════════════════════════════════════╝ */
+  --shadow-sm:        0 2px 8px var(--c-shadow-50);
+  --shadow-md:        0 4px 24px var(--c-shadow-60);
+  --shadow-lg:        0 8px 48px var(--c-shadow-70);
+  --shadow-glow:      0 0 24px var(--brand-glow);
+  --shadow-glow-sm:   0 0 12px var(--c-red-muted);
+
+  /* ╔═══════════════════════════════════════════════════════════════════╗
+     ║ 6. Z-INDEX TIERS                                                    ║
+     ╚═══════════════════════════════════════════════════════════════════╝ */
+  --z-base:           1;
+  --z-sticky:         50;
+  --z-navbar:         100;
+  --z-dropdown:       200;
+  --z-sidebar-overlay: 300;
+  --z-modal:          1000;
+  --z-toast:          1100;
+
+  /* ╔═══════════════════════════════════════════════════════════════════╗
+     ║ 7. LAYOUT (dimensions + responsive breakpoints)                    ║
+     ╚═══════════════════════════════════════════════════════════════════╝ */
+  --sidebar-w:        240px;   /* docked sidebar width */
+  --sidebar-rail-w:   72px;    /* icon-only rail width */
+  --navbar-h:         60px;    /* fixed top navbar height */
+  --content-max:      1800px;  /* max content width cap */
+
+  /* Breakpoints */
+  --bp-sm:            480px;    /* 1-column grid below this */
+  --bp-md:            840px;    /* sidebar -> overlay drawer */
+  --bp-lg:            1280px;   /* sidebar docks; watch 2-column */
+  --bp-xl:            1600px;   /* content width caps; grid widens */
+
+  /* ╔═══════════════════════════════════════════════════════════════════╗
+     ║ 8. MOTION                                                           ║
+     ╚═══════════════════════════════════════════════════════════════════╝ */
+  --ease:             cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring:      cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-fast:           120ms;
+  --t-base:           200ms;
+  --t-slow:           350ms;
+
+  /* ╔═══════════════════════════════════════════════════════════════════╗
+     ║ ACCESSIBILITY — focus ring (composite; references a primitive)     ║
+     ╚═══════════════════════════════════════════════════════════════════╝ */
+  --focus-ring:       0 0 0 3px var(--c-red-ring);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   LIGHT THEME — complete, audited override.
+   Re-points every semantic COLOR token to a light primitive so each one
+   still resolves to exactly one primitive (no raw literals in semantics).
+   Light-tuned primitives are introduced here, then mapped below.
+═══════════════════════════════════════════════════════════════════════ */
+body.light-theme {
+  /* Light neutral surface ramp (primitives) */
+  --c-light-50:       #f9f9f9;
+  --c-light-0:        #ffffff;
+  --c-light-100:      #f2f2f2;
+  --c-light-200:      #ebebeb;
+  --c-light-300:      #e2e2e2;
+
+  /* Light ink text ramp (primitives) */
+  --c-ink-900:        #0f0f0f;
+  --c-ink-600:        #5f5f5f;
+  --c-ink-400:        #8a8a8a;
+  --c-ink-200:        #b8b8b8;
+
+  /* Translucent black (light-theme borders) */
+  --c-black-a10:      rgba(0, 0, 0, 0.10);
+  --c-black-a18:      rgba(0, 0, 0, 0.18);
+
+  /* Status primitives (light-tuned for AA on white) */
+  --c-green-600:      #16a34a;
+  --c-rose-600:       #dc2626;
+  --c-blue-600:       #2563eb;
+  --c-amber-600:      #d97706;
+
+  /* Light shadow color primitives (softer on light surfaces) */
+  --c-shadow-05:      rgba(0, 0, 0, 0.05);
+  --c-shadow-08:      rgba(0, 0, 0, 0.08);
+  --c-shadow-12:      rgba(0, 0, 0, 0.12);
+  --c-scrim-light:    rgba(0, 0, 0, 0.45);
+
+  /* Focus-ring primitive (lighter on light theme) */
+  --c-red-ring-light: rgba(255, 45, 45, 0.30);
+
+  /* ── Semantic re-mappings (light) ─────────────────────────────────── */
+
+  /* Surfaces */
+  --bg-base:          var(--c-light-50);
+  --bg-surface:       var(--c-light-0);
+  --bg-elevated:      var(--c-light-100);
+  --bg-overlay:       var(--c-light-200);
+  --bg-hover:         var(--c-light-300);
+
+  /* Text
+     Contrast intents (light theme):
+       --text-primary   on --bg-base/--bg-surface -> AA body (>= 4.5:1)
+       --text-secondary (#5f5f5f) on white        -> AA body (>= 4.5:1)
+       --text-muted     (#8a8a8a)                 -> AA large text only */
+  --text-primary:     var(--c-ink-900);
+  --text-secondary:   var(--c-ink-600);
+  --text-muted:       var(--c-ink-400);
+  --text-disabled:    var(--c-ink-200);
+  /* --text-on-brand keeps the dark-theme white primitive (white on red). */
+
+  /* Borders */
+  --border:           var(--c-black-a10);
+  --border-hover:     var(--c-black-a18);
+  /* --border-active inherits the brand-red border primitive (intentional). */
+
+  /* Status */
+  --success:          var(--c-green-600);
+  --danger:           var(--c-rose-600);
+  --info:             var(--c-blue-600);
+  --warning:          var(--c-amber-600);
+
+  /* Scrim */
+  --scrim:            var(--c-scrim-light);
+
+  /* Elevation (softer shadows on light surfaces) */
+  --shadow-sm:        0 2px 8px var(--c-shadow-05);
+  --shadow-md:        0 4px 24px var(--c-shadow-08);
+  --shadow-lg:        0 8px 48px var(--c-shadow-12);
+
+  /* Focus ring */
+  --focus-ring:       0 0 0 3px var(--c-red-ring-light);
+}

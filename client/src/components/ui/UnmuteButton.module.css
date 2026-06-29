@@ -1,0 +1,67 @@
+/* UnmuteButton — visible overlay affordance for muted autoplay.
+   Sits over a dark player surface, so it carries its own opaque backdrop and a
+   light foreground for legible contrast regardless of the video frame. */
+
+.unmuteButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.24));
+  border-radius: var(--radius-full);
+  /* Opaque dark scrim keeps the control visible over any video frame. */
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  line-height: 1;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease);
+}
+
+.unmuteButton:hover {
+  background: rgba(0, 0, 0, 0.78);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.unmuteButton:active {
+  transform: scale(0.96);
+}
+
+.unmuteButton:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring, 0 0 0 3px rgba(255, 255, 255, 0.7));
+}
+
+/* Unmuted state: icon-only, compact circular control. */
+.unmuted {
+  padding: var(--sp-2);
+}
+
+/* Icon slot — sizes the embedded svg consistently. */
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  line-height: 0;
+}
+
+.icon :global(svg),
+.icon > * {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Visible call-to-action text shown only while muted. */
+.label {
+  white-space: nowrap;
+}

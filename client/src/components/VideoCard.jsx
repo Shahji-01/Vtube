@@ -1,68 +1,14 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { formatDuration, formatTimeAgo, formatViews, secureUrl } from '../utils/formatters'
-import Avatar from './Avatar'
-
-export default function VideoCard({ video, hideAvatar = false }) {
-  const navigate = useNavigate()
-
-  const handleChannelClick = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    navigate(`/channel/${video?.owner?.username}`)
-  }
-
-  return (
-    <Link to={`/watch/${video._id}`} className="video-card">
-      <div className="video-thumb-wrap">
-        <img
-          className="video-thumb"
-          src={secureUrl(video.thumbnail)}
-          alt={video.title}
-          loading="lazy"
-        />
-        <span className="video-duration">{formatDuration(video.duration)}</span>
-      </div>
-
-      <div className="video-info">
-        {!hideAvatar && (
-          <div
-            className="channel-avatar"
-            onClick={handleChannelClick}
-            style={{ cursor: 'pointer' }}
-          >
-            <Avatar src={video?.owner?.avatar} name={video?.owner?.fullName || video?.owner?.username} size={36} />
-          </div>
-        )}
-        <div className="video-meta">
-          <div className="video-title">{video.title}</div>
-          {video?.owner && (
-            <div
-              className="video-channel"
-              onClick={handleChannelClick}
-            >
-              {video.owner.fullName || video.owner.username}
-            </div>
-          )}
-          <div className="video-stats">
-            {formatViews(video.views)} views • {formatTimeAgo(video.createdAt)}
-          </div>
-        </div>
-      </div>
-    </Link>
-  )
-}
-
-export function VideoCardSkeleton() {
-  return (
-    <div className="skeleton-card">
-      <div className="skeleton skeleton-thumb" />
-      <div className="video-info">
-        <div className="skeleton skeleton-avatar" />
-        <div className="video-meta" style={{ flex: 1 }}>
-          <div className="skeleton skeleton-line" style={{ width: '90%', marginBottom: 6 }} />
-          <div className="skeleton skeleton-line short" />
-        </div>
-      </div>
-    </div>
-  )
-}
+// VideoCard has moved to the design-system primitives under `ui/`.
+// This re-export preserves the existing `../components/VideoCard` import path
+// (default export) so callers keep working unchanged.
+//
+// The named `VideoCardSkeleton` previously exported here now lives with the
+// shared Skeleton primitive (ui/Skeleton); it is re-exported from this same
+// module so existing `import VideoCard, { VideoCardSkeleton }` imports keep
+// resolving without changes.
+//
+// This is a pure re-export shim (no component is defined locally), so the
+// react-refresh "only-export-components" check does not apply here.
+/* eslint-disable react-refresh/only-export-components */
+export { default } from './ui/VideoCard'
+export { VideoCardSkeleton } from './ui/Skeleton'

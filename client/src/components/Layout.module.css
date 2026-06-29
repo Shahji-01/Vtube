@@ -1,0 +1,67 @@
+/* Layout shell — presentation only, driven by semantic tokens.
+   Provides the landmark scaffolding (banner / primary nav / main) and the
+   responsive content-push behavior. The Sidebar owns its own positioning,
+   scrim, and active-route logic; this module only frames the regions. */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg-base);
+  color: var(--text-primary);
+}
+
+/* The banner is the sticky region so the Navbar stays pinned to the top of
+   the viewport as the page scrolls, above all non-overlay content. */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-navbar);
+}
+
+.body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Semantic wrapper for the Sidebar landmark. The Sidebar positions itself
+   (docked rail / overlay drawer), so this wrapper takes no layout space. */
+.nav {
+  display: contents;
+}
+
+/* Main content region. The content push is applied as a left offset so the
+   docked sidebar and the content never overlap; the offset animates and is
+   removed entirely in overlay mode (full-width content). */
+.main {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 0;
+  transition: padding-left var(--t-base) var(--ease);
+}
+
+/* Req 5.1 — docked + open: offset by the sidebar-width layout token. */
+.pushed {
+  padding-left: var(--sidebar-w);
+}
+
+/* Inner wrapper caps content width and supplies consistent gutters. */
+.content {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding: var(--sp-6) var(--sp-4);
+}
+
+@media (min-width: 840px) {
+  .content {
+    padding: var(--sp-6);
+  }
+}
+
+/* Remove the focus ring from the programmatically-focused main region; the
+   skip link itself shows a visible focus ring, and main is not a tab stop. */
+.main:focus {
+  outline: none;
+}

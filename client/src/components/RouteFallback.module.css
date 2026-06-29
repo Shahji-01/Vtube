@@ -1,0 +1,10 @@
+/* RouteFallback — centered Suspense fallback. Tokens only, no raw literals. */
+
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 60vh;
+  padding: var(--sp-12) var(--sp-6);
+}

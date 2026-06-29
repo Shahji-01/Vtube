@@ -1,0 +1,54 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   SUBSCRIPTIONS PAGE — token-driven, no inline presentational styles.
+   ─────────────────────────────────────────────────────────────────────
+   Replaces the legacy global `.page-header` / `.video-grid` / `.empty-state`
+   classes with scoped module classes that reference design tokens only.
+   Layout regions:
+     - .header : page title + subtitle block
+     - .grid   : responsive VideoCard / skeleton grid
+═══════════════════════════════════════════════════════════════════════ */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-6);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+}
+
+.subtitle {
+  margin-top: var(--sp-1);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  color: var(--text-muted);
+}
+
+/* ── RESPONSIVE VIDEO GRID ──────────────────────────────────────────────
+   1 column on narrow screens, 2 columns on tablets, and an auto-fill grid
+   yielding at least 3 columns on desktop. */
+.grid {
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}

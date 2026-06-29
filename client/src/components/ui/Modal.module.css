@@ -1,0 +1,87 @@
+/* Modal — accessible dialog primitive. Consumes semantic tokens only. */
+
+/* Full-viewport scrim that dims the page and centers the dialog. Uses the
+   --scrim token and the --z-modal tier. */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+  background: var(--scrim);
+  animation: modal-scrim-in var(--t-base) var(--ease);
+}
+
+/* Dialog surface. */
+.dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - var(--sp-8));
+  overflow: hidden;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  outline: none;
+  animation: modal-surface-in var(--t-base) var(--ease-spring);
+}
+
+.header {
+  flex: 0 0 auto;
+  padding: var(--sp-5) var(--sp-6);
+  border-bottom: 1px solid var(--border);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  line-height: var(--lh-xl);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.body {
+  flex: 1 1 auto;
+  padding: var(--sp-6);
+  overflow-y: auto;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+}
+
+.footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-6);
+  border-top: 1px solid var(--border);
+}
+
+@keyframes modal-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-surface-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

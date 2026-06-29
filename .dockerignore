@@ -1,0 +1,32 @@
+# Keep the build context small and avoid leaking local state/secrets.
+
+# Dependencies (reinstalled inside the image)
+**/node_modules
+
+# Build outputs (the client is rebuilt in-image)
+client/dist
+server/dist
+
+# Secrets & local env — NEVER copy real env files into the image
+**/.env
+**/.env.*
+!**/.env.sample
+
+# VCS & tooling
+.git
+.gitignore
+.vscode
+.kiro
+
+# Local upload scratch space
+server/public/temp
+
+# Logs & OS cruft
+**/*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Tests & docs not needed at runtime
+**/__tests__
+**/*.test.js

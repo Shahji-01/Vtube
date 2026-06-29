@@ -2,36 +2,56 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
+import { useAnnouncer } from '../context/AnnouncerContext'
 import { getErrorMessage } from '../utils/formatters'
-import Spinner from '../components/Spinner'
+import Input from '../components/ui/Input'
+import Button from '../components/ui/Button'
+import styles from './Auth.module.css'
 
 const PlayIcon = () => (
-  <svg viewBox="0 0 24 24" style={{ width: 22, height: 22, fill: 'white' }}>
-    <polygon points="5 3 19 12 5 21 5 3"/>
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <polygon points="5 3 19 12 5 21 5 3" />
   </svg>
 )
 const UploadIcon = () => (
-  <svg viewBox="0 0 24 24" style={{ width: 28, height: 28, stroke: 'currentColor', fill: 'none', strokeWidth: 1.5 }}>
-    <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
-    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" />
+    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
   </svg>
 )
 const CheckIcon = () => (
-  <svg viewBox="0 0 24 24" style={{ width: 28, height: 28, stroke: 'var(--red)', fill: 'none', strokeWidth: 2 }}>
-    <polyline points="20 6 9 17 4 12"/>
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <polyline points="20 6 9 17 4 12" />
   </svg>
 )
 
-function FileDropZone({ label, required, accept, onChange, file }) {
+function FileDropZone({ label, required, accept, onChange, file, error }) {
+  const errorId = error ? `${label.replace(/\s+/g, '-').toLowerCase()}-error` : undefined
   return (
-    <div className="input-group">
-      <label className="input-label">{label}{required && <span style={{ color: 'var(--red)' }}> *</span>}</label>
-      <div className={`upload-zone ${file ? 'has-file' : ''}`}>
-        <input type="file" accept={accept} onChange={onChange} />
-        <div className="upload-icon">{file ? <CheckIcon /> : <UploadIcon />}</div>
-        <h4>{file ? file.name : 'Click or drag to upload'}</h4>
-        <p>{file ? `${(file.size / 1024).toFixed(1)} KB` : accept.replace(/image\/\*/,'Images').replace(/video\/\*/,'Videos')}</p>
+    <div className={styles.uploadGroup}>
+      <span className={styles.label}>
+        {label}
+        {required && <span className={styles.required} aria-hidden="true"> *</span>}
+      </span>
+      <div className={`${styles.uploadZone} ${file ? styles.hasFile : ''}`}>
+        <input
+          className={styles.uploadInput}
+          type="file"
+          accept={accept}
+          onChange={onChange}
+          aria-label={label}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={errorId}
+        />
+        <div className={styles.uploadIcon}>{file ? <CheckIcon /> : <UploadIcon />}</div>
+        <p className={styles.uploadName}>{file ? file.name : 'Click or drag to upload'}</p>
+        <p className={styles.uploadHint}>
+          {file
+            ? `${(file.size / 1024).toFixed(1)} KB`
+            : accept.replace(/image\/\*/, 'Images').replace(/video\/\*/, 'Videos')}
+        </p>
       </div>
+      {error && <span id={errorId} className={styles.error}>{error}</span>}
     </div>
   )
 }
@@ -40,6 +60,7 @@ export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
+  const { announce } = useAnnouncer()
 
   const [form, setForm] = useState({ username: '', fullName: '', email: '', password: '' })
   const [avatar, setAvatar] = useState(null)
@@ -65,7 +86,11 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     const errs = validate()
-    if (Object.keys(errs).length) { setErrors(errs); return }
+    if (Object.keys(errs).length) {
+      setErrors(errs)
+      announce('Please correct the highlighted fields and try again.')
+      return
+    }
 
     setLoading(true)
     try {
@@ -81,91 +106,83 @@ export default function Register() {
       toast({ message: 'Account created! Please sign in.', type: 'success' })
       navigate('/login')
     } catch (err) {
-      toast({ message: getErrorMessage(err), type: 'error' })
+      const message = getErrorMessage(err)
+      toast({ message, type: 'error' })
+      announce(message)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="auth-page" style={{ padding: '32px 24px' }}>
-      <div className="auth-bg">
-        <div className="auth-bg-glow" />
+    <div className={`${styles.page} ${styles.pageScroll}`}>
+      <div className={styles.bg}>
+        <div className={styles.glow} />
       </div>
 
-      <div className="auth-card" style={{ maxWidth: 520 }}>
-        <div className="auth-logo">
-          <div className="auth-logo-icon"><PlayIcon /></div>
-          <h1 className="auth-title">Join VTube</h1>
-          <p className="auth-sub">Start sharing your videos with the world</p>
+      <div className={`${styles.card} ${styles.cardWide}`}>
+        <div className={styles.logo}>
+          <div className={styles.logoIcon}><PlayIcon /></div>
+          <h1 className={styles.title}>Join VTube</h1>
+          <p className={styles.sub}>Start sharing your videos with the world</p>
         </div>
 
-        <form className="auth-form" onSubmit={handleSubmit} noValidate>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div className="input-group">
-              <label className="input-label">Full Name<span style={{ color: 'var(--red)' }}>*</span></label>
-              <input
-                id="reg-fullname"
-                className={`input ${errors.fullName ? 'error' : ''}`}
-                placeholder="John Doe"
-                value={form.fullName}
-                onChange={(e) => handleChange('fullName', e.target.value)}
-              />
-              {errors.fullName && <span className="input-error">{errors.fullName}</span>}
-            </div>
-            <div className="input-group">
-              <label className="input-label">Username<span style={{ color: 'var(--red)' }}>*</span></label>
-              <input
-                id="reg-username"
-                className={`input ${errors.username ? 'error' : ''}`}
-                placeholder="johndoe"
-                value={form.username}
-                onChange={(e) => handleChange('username', e.target.value)}
-              />
-              {errors.username && <span className="input-error">{errors.username}</span>}
-            </div>
-          </div>
-
-          <div className="input-group">
-            <label className="input-label">Email address<span style={{ color: 'var(--red)' }}>*</span></label>
-            <input
-              id="reg-email"
-              className={`input ${errors.email ? 'error' : ''}`}
-              type="email"
-              placeholder="you@example.com"
-              value={form.email}
-              onChange={(e) => handleChange('email', e.target.value)}
+        <form className={styles.form} onSubmit={handleSubmit} noValidate>
+          <div className={styles.row}>
+            <Input
+              id="reg-fullname"
+              label="Full Name"
+              required
+              placeholder="John Doe"
+              value={form.fullName}
+              onChange={(e) => handleChange('fullName', e.target.value)}
+              error={errors.fullName}
             />
-            {errors.email && <span className="input-error">{errors.email}</span>}
-          </div>
-
-          <div className="input-group">
-            <label className="input-label">Password<span style={{ color: 'var(--red)' }}>*</span></label>
-            <input
-              id="reg-password"
-              className={`input ${errors.password ? 'error' : ''}`}
-              type="password"
-              placeholder="Min 6 characters"
-              value={form.password}
-              onChange={(e) => handleChange('password', e.target.value)}
+            <Input
+              id="reg-username"
+              label="Username"
+              required
+              placeholder="johndoe"
+              value={form.username}
+              onChange={(e) => handleChange('username', e.target.value)}
+              error={errors.username}
             />
-            {errors.password && <span className="input-error">{errors.password}</span>}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <FileDropZone
-                label="Avatar Image"
-                required
-                accept="image/*"
-                file={avatar}
-                onChange={(e) => {
-                  setAvatar(e.target.files[0] || null)
-                  if (errors.avatar) setErrors(prev => { const e = { ...prev }; delete e.avatar; return e })
-                }}
-              />
-              {errors.avatar && <span className="input-error">{errors.avatar}</span>}
-            </div>
+          <Input
+            id="reg-email"
+            label="Email address"
+            required
+            type="email"
+            placeholder="you@example.com"
+            value={form.email}
+            onChange={(e) => handleChange('email', e.target.value)}
+            error={errors.email}
+          />
+
+          <Input
+            id="reg-password"
+            label="Password"
+            required
+            type="password"
+            placeholder="Min 6 characters"
+            value={form.password}
+            onChange={(e) => handleChange('password', e.target.value)}
+            error={errors.password}
+          />
+
+          <div className={styles.row}>
+            <FileDropZone
+              label="Avatar Image"
+              required
+              accept="image/*"
+              file={avatar}
+              error={errors.avatar}
+              onChange={(e) => {
+                setAvatar(e.target.files[0] || null)
+                if (errors.avatar) setErrors(prev => { const er = { ...prev }; delete er.avatar; return er })
+              }}
+            />
             <FileDropZone
               label="Cover Image"
               accept="image/*"
@@ -174,20 +191,22 @@ export default function Register() {
             />
           </div>
 
-          <button
+          <Button
             id="reg-submit"
             type="submit"
-            className="btn btn-primary btn-lg w-full"
-            disabled={loading}
-            style={{ marginTop: 8 }}
+            variant="primary"
+            size="lg"
+            fullWidth
+            loading={loading}
+            className={styles.submit}
           >
-            {loading ? <><Spinner /> Creating account…</> : 'Create Account'}
-          </button>
+            {loading ? 'Creating account…' : 'Create Account'}
+          </Button>
         </form>
 
-        <div className="auth-footer">
+        <div className={styles.footer}>
           Already have an account?{' '}
-          <Link to="/login" className="auth-link">Sign In</Link>
+          <Link to="/login" className={styles.link}>Sign In</Link>
         </div>
       </div>
     </div>

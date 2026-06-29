@@ -1,0 +1,354 @@
+/* Navbar — presentation only, driven by semantic tokens.
+   The banner landmark is provided by the Layout <header role="banner">;
+   this component declares no landmark role of its own. */
+
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-navbar);
+
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  height: var(--navbar-h);
+  padding: 0 var(--sp-4);
+
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* ── Left cluster ───────────────────────────── */
+.left {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 0 0 auto;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.logoIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--brand);
+  color: var(--text-on-brand);
+  transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+
+.logoIcon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.logo:hover .logoIcon {
+  transform: scale(1.08);
+  box-shadow: var(--shadow-glow);
+}
+
+.logoText {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--tracking-tight);
+}
+
+/* ── Center search (inline, >= --bp-md) ─────── */
+.searchForm {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.searchInput {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  transition: border-color var(--t-base) var(--ease), background var(--t-base) var(--ease);
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--border-active);
+  background: var(--bg-surface);
+}
+
+.searchInput:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.searchSubmit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+
+.searchSubmit:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.searchSubmit:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.searchSubmit svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* ── Right cluster ──────────────────────────── */
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* The avatar trigger relaxes the icon slot so the avatar isn't clipped. */
+.avatarTrigger {
+  color: inherit;
+}
+
+/* Search trigger is hidden when the inline search is shown. */
+.searchTrigger {
+  display: none;
+}
+
+/* ── Account dropdown ───────────────────────── */
+.dropdown {
+  position: relative;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + var(--sp-2));
+  right: 0;
+  z-index: var(--z-dropdown);
+  min-width: 240px;
+  padding: var(--sp-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  animation: navbarDropIn var(--t-fast) var(--ease);
+}
+
+@keyframes navbarDropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdownHeader {
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--sp-2);
+}
+
+.dropdownName {
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-base);
+  color: var(--text-primary);
+}
+
+.dropdownUsername {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+
+.dropdownItem svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  display: block;
+}
+
+.dropdownItem:hover {
+  background: var(--bg-hover);
+}
+
+.dropdownItem:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.danger {
+  color: var(--danger);
+}
+
+.danger:hover {
+  background: var(--brand-muted);
+}
+
+.dropdownSep {
+  height: 1px;
+  margin: var(--sp-2) 0;
+  background: var(--border);
+}
+
+/* ── Mobile search overlay ──────────────────── */
+.searchOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-dropdown);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--sp-3);
+  background: var(--bg-surface);
+}
+
+.searchOverlayForm {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+}
+
+.searchOverlayForm .searchInput {
+  flex: 1 1 auto;
+}
+
+/* ── Responsive: collapse inline search below --bp-md (840px) ───────────
+   Media queries cannot read CSS custom properties; the literal mirrors the
+   --bp-md token value defined in styles/tokens.css. */
+@media (max-width: 839.98px) {
+  .searchForm {
+    display: none;
+  }
+
+  .searchTrigger {
+    display: inline-flex;
+  }
+
+  .logoText {
+    display: none;
+  }
+}
+
+/* ── Search autocomplete suggestions ────────────────────────────────────
+   The suggestion list anchors to the search form, so both the inline and
+   overlay forms establish a positioning context for the absolute dropdown. */
+.searchForm,
+.searchOverlayForm {
+  position: relative;
+}
+
+.suggestions {
+  position: absolute;
+  top: calc(100% + var(--sp-1));
+  left: 0;
+  right: 0;
+  z-index: var(--z-dropdown);
+  margin: 0;
+  padding: var(--sp-1);
+  list-style: none;
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  animation: navbarDropIn var(--t-fast) var(--ease);
+}
+
+.suggestionItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease);
+}
+
+.suggestionItem svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  display: block;
+  color: var(--text-muted);
+}
+
+.suggestionText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestionItem:hover {
+  background: var(--bg-hover);
+}
+
+.suggestionItem:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

@@ -1,0 +1,183 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   SETTINGS PAGE — token-driven, no inline presentational styles.
+   ─────────────────────────────────────────────────────────────────────
+   Regions:
+     - .header        : page title + subtitle block
+     - .sections      : vertical stack of setting cards
+     - .section       : a single card (appearance / account / security)
+     - appearance     : cover banner + avatar upload (overlay file inputs)
+     - .form          : labeled fields + submit action
+═══════════════════════════════════════════════════════════════════════ */
+
+/* ── HEADER ─────────────────────────────────────────────────────────── */
+.header {
+  margin-bottom: var(--sp-6);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  line-height: var(--lh-2xl);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.subtitle {
+  margin-top: var(--sp-1);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  color: var(--text-muted);
+}
+
+/* ── SECTION STACK ──────────────────────────────────────────────────── */
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-8);
+  max-width: 800px;
+  margin: var(--sp-5) 0;
+}
+
+.section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-6);
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+  padding-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── APPEARANCE ─────────────────────────────────────────────────────── */
+.appearanceBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  padding: var(--sp-6) 0 0;
+}
+
+.fieldLabel {
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-base);
+  color: var(--text-primary);
+  margin-bottom: var(--sp-3);
+}
+
+/* Shared upload overlay (scrim + centered control). */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-on-brand);
+  background: var(--scrim);
+  transition: opacity var(--t-base) var(--ease);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+
+.overlayText {
+  margin-left: var(--sp-2);
+}
+
+/* ── COVER BANNER ───────────────────────────────────────────────────── */
+.cover {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  background: var(--bg-elevated);
+}
+
+.coverImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.coverPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-elevated);
+}
+
+/* Cover overlay sits semi-visible so the "Change Cover" affordance reads. */
+.coverOverlay {
+  opacity: 0.8;
+}
+
+.cover:hover .coverOverlay,
+.overlayActive {
+  opacity: 1;
+}
+
+/* ── AVATAR ─────────────────────────────────────────────────────────── */
+.avatarRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+}
+
+.avatarWrap {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Avatar overlay reveals on hover (or while uploading). */
+.avatarOverlay {
+  opacity: 0;
+}
+
+.avatarWrap:hover .avatarOverlay {
+  opacity: 1;
+}
+
+.avatarTitle {
+  font-size: var(--fs-lg);
+  line-height: var(--lh-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.avatarHint {
+  margin-top: var(--sp-1);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+/* ── FORMS ──────────────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin-top: var(--sp-5);
+}
+
+.actions {
+  display: flex;
+}
